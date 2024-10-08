@@ -1,0 +1,51 @@
+{% load static %}
+
+
+{% if "http://localhost:8000/applications/" in request.build_absolute_uri %}
+
+    <div class="fav-card">
+         <div class="row">
+            <div class="col-md-2 d-flex justify-center">
+                <img src="{{ city.image }}">
+            </div>
+            <div class="col-md-10">
+                <div class="fav-card-body">
+                    <h5> {{ city.name }} </h5>
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Количество вакансий: </label>
+                            </div>
+                            <div class="col-md-9">
+                                <input disabled type="number" class="form-control" value={{ city.count }}>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="/cities/{{ city.id }}/" class="fav-btn-open">
+                        Открыть
+                    </a>
+                    
+                </div>
+            </div>
+         </div>
+    </div>
+
+{% else %}
+    
+    <div class="city-card">
+        <div class="city-card-body">
+            <div class="city-card-img">
+                <img src="{{ city.image }}" alt="{{ city.name }}">
+            </div>
+            <h5 class="city-name">{{ city.name }}</h5>
+            <p class="city-info">
+                Население: <span class="statistics">{{ city.population }} </span><br>
+                Средняя зарплата: <span class="statistics">{{ city.salary }} тыс.</span><br>
+                Уровень безработицы: <span class="statistics">{{ city.unemployment_rate }} %</span>
+            </p>
+            <a href="/cities/{{ city.id }}/" class="city-btn">Подробнее</a>
+        </div>
+    </div>
+    
+{% endif %}

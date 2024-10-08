@@ -1,0 +1,415 @@
+.navbar {
+    background-color: #000000;
+    width: 100%;
+    height: 96px;
+    margin: 0 auto;
+}
+
+.logo {
+    width: 57px;
+    height: 57px;
+    background-color: #CF0000;
+    border-radius: 50%; /* Закругление краев для круга */
+    display: flex;
+    align-items: center; /* Выравнивание по вертикали */
+    justify-content: center; /* Выравнивание по горизонтали */
+    color: white; /* Цвет текста */
+    font-family: 'Arial', sans-serif;
+    font-weight: bold; /* Жирный шрифт */
+    font-size: 25px; /* Размер шрифта */
+}
+
+.container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.intro h1 {
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 64px;
+    margin-top: 129px;
+    color: black;
+    letter-spacing: -0.05em; /* Отрицательное значение для уменьшения интервала между буквами */
+    height: 53px;
+    width: 799px;
+}
+
+.intro p {
+    font-family: 'Arial', sans-serif;
+    font-weight: normal;
+    font-size: 20px;
+    color: #393939;
+    line-height: 26px;
+    width: 675px;
+    height: 136px;
+    margin-top: 38px;
+}
+
+.intro img {
+    width: 415px;
+    height: 337px;
+    margin-top: 78px;
+}
+
+.highlight {
+    background-color: #F4EE55;
+    padding: 0 2px; /* Немного отступа по бокам для эффекта */
+}
+
+.cities-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-top: 63px;
+    margin-bottom: 63px;
+}
+
+.cities-title h1 {
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 44px;
+    color: black;
+    letter-spacing: -0.01em; /* Отрицательное значение для уменьшения интервала между буквами */
+    width: 582px;
+    height: 102px;
+    text-align: center;
+}
+
+.cities-and-search {
+  background-color: #ECF4FF;
+  width: 100%;
+}
+
+.inp-text {
+    width: 771px;
+    height: 51px;
+    margin: 47px 0;
+    border-radius: 12px; /* Добавляем скругление здесь */
+    background-color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    font-family: 'Arial', sans-serif;
+    font-size: 20px;
+    color: #9799A4;
+    padding-left: 50px; /* Отступ от левого края для иконки */
+    border-color: #CACFD0;
+    border-width: 1px;
+}
+
+.search-button {
+    margin-top: 47px;
+    margin-left: 40px;
+    height: 51px;
+    width: 198px;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 20px;
+    background-color: #1890FF;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.cards-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 25%));
+    gap: 25px;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.city-card {
+    width: 371px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.city-card-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.city-card-img {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    width: 120px;  /* фиксированная ширина изображения */
+    height: 90px;  /* фиксированная высота изображения */
+}
+
+.city-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.city-name {
+    height: 103px; /* высота, равная высоте картинки */
+    width: 185px; /* максимальная ширина текста */
+    font-family: 'Arial', sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    margin-left: 15px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-end; /* выравнивание текста по нижнему краю картинки */
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+}
+
+.city-info {
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+    color: #555555;
+    margin-left: 15px;
+    height: 71px; /* фиксированная высота для информации о городе */
+    line-height: 1.2; /* уменьшенное расстояние между строками */
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.statistics {
+    font-family: 'Arial', sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    color: #3166B6;
+}
+
+.city-btn {
+    width: 143px;
+    height: 24px;
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
+    background-color: #1890FF;
+    color: white;
+    border-radius: 2px;
+    text-decoration: none;
+    display: flex; /*  Делаем  кнопку  flex-контейнером  */
+    align-items: center; /*  Выравниваем  по  вертикали  */
+    justify-content: center;
+    margin-left: 114px;
+    margin-bottom: 19px;
+}
+
+.city-banner img{
+    width: 100%;
+    height: 144px;
+    object-fit: cover;
+}
+
+.city-page-container {
+    background-color: #ECF4FF;
+    width: 100%;
+    padding-top: 59px;
+    padding-bottom: 66px;
+}
+
+.city-content h1{
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 38px;
+    color: #000000;
+    line-height: 51px;
+    margin-bottom: 48px;
+}
+
+.city_content h5{
+    font-family: 'Arial', sans-serif;
+    font-weight: normal;
+    font-size: 20px;
+    color: #393939;
+    width: 1123px;
+    height: auto;
+}
+
+.info-number {
+    width: 45px;
+    height: 45px;
+    background-color: #fff;
+    color: #1890FF;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    border: 2px solid #1890FF;
+}
+
+.info{
+    margin-top: 97px;
+    margin-bottom: 211px;
+}
+
+.info-text p{
+    font-weight: 700;
+    margin-bottom: 1.5px;
+    letter-spacing: 0;
+}
+
+.info-text {
+    color: #393939;
+    font-size: 20px;
+    line-height: 1.3; /* уменьшенное расстояние между строками */
+    font-family: 'Arial', sans-serif;
+    font-stretch: condensed; /* Узкий шрифт */
+    letter-spacing: 0.08em;
+}
+
+.home-btn{
+    width: 52px;
+    height: 57px;
+    display: flex;
+    align-items: center; /* Выравнивание по вертикали */
+    justify-content: center; /* Выравнивание по горизонтали */
+    margin-right: 120px;
+}
+
+.home-btn img{
+    height: 100%;
+    object-fit: cover;
+}
+
+.btn-favorites{
+    position: absolute;
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center; /* Выравнивание по вертикали */
+    justify-content: center; /* Выравнивание по горизонтали */
+    margin-top: 47px;
+    margin-left: -46px;
+}
+
+.btn-favorites img{
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge {
+    position: absolute;
+    top: -10px;
+    right: 8px;
+    width: 21px;
+    height: 21px;
+    background-color: #CF0000;
+    color: white; /* Цвет текста */
+    font-family: 'Arial', sans-serif;
+    font-weight: bold; /* Жирный шрифт */
+    font-size: 18px; /* Размер шрифта */
+}
+
+.fav-content h1{
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 38px;
+    color: #000000;
+    width: 920px;
+    margin-top: 97px;
+}
+
+.fav-content h4{
+    font-family: 'Arial', sans-serif;
+    font-size: 20px;
+    color: #000000;
+    width: 1010px;
+    margin-bottom: 12px;
+}
+
+.fav-content img{
+    width: 130px;
+    height: 135px;
+    margin-top: 32px;
+    margin-left: 137px;
+}
+
+.fav-card{
+    width: 1187px;
+    height: 189px;
+    background-color: #ECF4FF;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.fav-card img{
+    width: 169px;
+    height: 149px;
+    object-fit: cover;
+    margin-top: 20px;
+    margin-left: 35px;
+    border-radius: 10%;
+}
+
+.fav-card-body {
+    margin-top: 26px;
+    margin-bottom: 25px;
+    margin-left: 29px;
+}
+
+.fav-card-body h5 {
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 18px;
+    color: #000000;
+    text-transform: uppercase;
+}
+
+.form-label {
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+    margin-top: 27px;
+    color: #555555;
+    height: 29px;
+}
+
+.form-control {
+    margin-top: 17px!important;
+    font-family: 'Arial', sans-serif!important;
+    font-weight: bold!important;
+    font-size: 21px!important;
+    color: #3166B6!important;
+    background-color: #ECF4FF!important;
+    border: none!important;
+    width: 250px!important;
+    margin-left:-60px!important;
+}
+
+.fav-btn-open{
+    width: 143px;
+    height: 24px;
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    background-color: #1890FF;
+    color: white;
+    border-radius: 2px;
+    text-decoration: none;
+    display: flex; /*  Делаем  кнопку  flex-контейнером  */
+    align-items: center; /*  Выравниваем  по  вертикали  */
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.search-icon{
+    width: 29px;
+    height: 23px;
+    position: absolute;
+    margin-left: 12px;
+    margin-top: 14px;
+}

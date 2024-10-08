@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block content %}
+    <main class="container">
+        <section class="cities-title">
+            <h1>Города для размещения Вашей вакансии</h1>
+        </section>
+    </main>
+    <section class="cities-and-search">
+        <main class="container">
+            <form class="search-bar" action="/" method="GET">
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="search-input">
+                            <img class="search-icon" src="{% static 'images/search-image.png' %}"/> 
+                            <input type="text" class="inp-text" placeholder="Поиск" name="city_name" value="{{ city_name }}">
+                        </div>    
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="search-button">Найти</button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="/applications/{{ draft_application.id }}/" class="btn-favorites">
+                            <img src="{% static 'images/favorites-btn.png' %}" alt="Избранное" />
+                            <div class=".badge position-absolute badge rounded-pill">
+                                {{ cities_count }}
+                            </div>
+                        </a>
+                    </div>
+                </div> 
+            </form>
+            <div class="cards-wrapper">
+                {% for city in cities %}
+                    {% include "city_card.html" %}
+                {% endfor %}
+            </div>
+            <div style="height: 300px;"></div>
+        </main>
+    </section>
+{% endblock content %}
