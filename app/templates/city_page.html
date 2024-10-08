@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block content %}
+    <div class="city-banner">
+        <img src="{{ city.url }}" alt="{{ city.name }}">
+    </div>
+    <section class="city-page-container">
+        <main class="container">
+            <div class="city-content">
+                <h1>{{ city.name }} - Возможности для бизнеса и поиска сотрудников</h1>
+                <h5>{{ city.description }}</h5>
+            </div>
+        </main>
+    </section>
+    <main class="container">
+        <div class="info">
+            <div class="row">
+                <div class="col-md-1">
+                    <div class="info-number">!</div>
+                </div>
+                <div class="col-md-11">
+                    <div class="info-text">
+                        <p>Статистика по рынку труда</p>
+                        <ul>
+                            <li>Население: {{ city.population }} человек.</li>
+                            <li>Средняя зарплата: {{ city.salary }} тыс. руб.</li>
+                            <li>Уровень безработицы: {{ city.unemployment_rate }}%.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock content %}
