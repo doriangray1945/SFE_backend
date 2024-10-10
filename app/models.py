@@ -31,7 +31,7 @@ class Applications(models.Model):
     date_created = models.DateTimeField(blank=False, null=False)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_applications', blank=True, null=True)
 
-    submitted = models.DateTimeField(blank=False, null=False)
+    submitted = models.DateTimeField(blank=True, null=True)
     completed = models.DateTimeField(blank=True, null=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_applications',blank=True, null=True)
 
@@ -57,3 +57,23 @@ class CitiesApplications(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['city_id', 'app_id'], name='unique constraint')
         ]
+
+
+class AuthUser(models.Model):
+    password = models.CharField(max_length=128)
+    last_login = models.DateTimeField(blank=True, null=True)
+    is_superuser = models.BooleanField(default=False)
+    username = models.CharField(unique=True, max_length=150)
+    last_name = models.CharField(max_length=150)
+    email = models.CharField(max_length=254)
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    date_joined = models.DateTimeField(auto_now=True)
+    first_name = models.CharField(max_length=150)
+
+    def __str__(self):
+        return f'{self.first_name} {self.last_name}'
+
+    class Meta:
+        managed = False
+        db_table = 'auth_user'

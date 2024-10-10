@@ -1,11 +1,17 @@
+from rest_framework.response import Response
+from rest_framework import status
+from app.serializers import *
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view
+from .minio import add_pic
+
+
 from django.shortcuts import render, get_object_or_404
-from app.models import Cities, Applications, CitiesApplications
+from app.models import *
 from django.contrib.auth.models import User
 from django.utils import timezone
-
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-
 from django.db import connection
 
 
@@ -137,3 +143,99 @@ def delete_application(request):
                 cursor.execute("UPDATE applications SET status = 2 WHERE app_id = %s", [app_id])
 
         return HttpResponseRedirect(reverse('home_page'))
+
+
+# Лаб 3
+def user():
+    try:
+        user1 = AuthUser.objects.get(id=1)
+    except:
+        user1 = AuthUser(id=1, first_name="Иван", last_name="Иванов", password=1234, username="user1")
+        user1.save()
+    return user1
+
+
+class CitiesList(APIView):
+    model_class = Cities
+    serializer_class = CitiesSerializer
+
+    # Возвращает список акций
+    def get(self, request):
+        cities = self.model_class.objects.all()
+        serializer = self.serializer_class(cities, many=True)
+        return Response(serializer.data)
+
+    # Добавляет новую акцию
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            city = serializer.save()
+
+            user1 = user()
+            # Назначаем создателем акции польователя user1
+            city.user = user1
+            city.save()
+
+            pic = request.FILES.get("pic")
+            pic_result = add_pic(city, pic)
+            # Если в результате вызова add_pic результат - ошибка, возвращаем его.
+            if 'error' in pic_result.data:
+                return pic_result
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CitiesDetail(APIView):
+    model_class = Cities
+    serializer_class = FullCitiesSerializer
+
+    # Возвращает информацию об акции
+    def get(self, request, city_id):
+        city = get_object_or_404(self.model_class, city_id=city_id)
+        serializer = self.serializer_class(city)
+        return Response(serializer.data)
+
+    # Обновляет информацию об акции (для модератора)
+    def put(self, request, city_id):
+        city = get_object_or_404(self.model_class, city_id=city_id)
+        serializer = self.serializer_class(city, data=request.data, partial=True)
+        # Изменение фото логотипа
+        if 'pic' in serializer.initial_data:
+            pic_result = add_pic(city, serializer.initial_data['pic'])
+            if 'error' in pic_result.data:
+                return pic_result
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Удаляет информацию об акции
+    def delete(self, request, city_id):
+        city = get_object_or_404(self.model_class, city_id=city_id)
+        city.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Обновляет информацию об акции (для пользователя)
+@api_view(['Put'])
+def put(self, request, city_id):
+    city = get_object_or_404(self.model_class, city_id=city_id)
+    serializer = self.serializer_class(city, data=request.data, partial=True)
+
+    if 'pic' in serializer.initial_data:
+        pic_result = add_pic(city, serializer.initial_data['pic'])
+        if 'error' in pic_result.data:
+            return pic_result
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UsersList(APIView):
+    model_class = AuthUser
+    serializer_class = UserSerializer
+
+    def get(self, request, format=None):
+        user = self.model_class.objects.all()
+        serializer = self.serializer_class(user, many=True)
+        return Response(serializer.data)
