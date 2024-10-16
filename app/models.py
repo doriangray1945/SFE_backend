@@ -21,7 +21,7 @@ class Cities(models.Model):
         db_table = 'cities'
 
 
-class Applications(models.Model):
+class VacancyApplications(models.Model):
     STATUS_CHOICES = [
         (1, 'Черновик'),
         (2, 'Удалена'),
@@ -44,21 +44,21 @@ class Applications(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'applications'
+        db_table = 'vacancy_applications'
 
     def GetCities(self):
-        return CitiesApplications.objects.filter(app=self).values_list('cities', flat=True)
+        return CitiesVacancyApplications.objects.filter(app=self).values_list('cities', flat=True)
 
 
-class CitiesApplications(models.Model):
+class CitiesVacancyApplications(models.Model):
     mm_id = models.AutoField(primary_key=True)
     city_id = models.ForeignKey('Cities', models.DO_NOTHING, blank=True, null=True)
-    app_id = models.ForeignKey('Applications', models.DO_NOTHING, blank=True, null=True)
+    app_id = models.ForeignKey('VacancyApplications', models.DO_NOTHING, blank=True, null=True)
     count = models.IntegerField(default=1, blank=True, null=True)
 
     class Meta:
         managed = True
-        db_table = 'cities_applications'
+        db_table = 'cities_vacancy_applications'
         constraints = [
             models.UniqueConstraint(fields=['city_id', 'app_id'], name='unique constraint')
         ]

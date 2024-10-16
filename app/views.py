@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from app.models import Cities, Applications, CitiesApplications
+from app.models import Cities, VacancyApplications, CitiesVacancyApplications
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -13,13 +13,13 @@ def GetCurrentUser():
     return User.objects.filter(is_superuser=False).first()
 
 
-def GetDraftApplication():
+def GetDraftVacancyApplication():
     current_user = GetCurrentUser()
-    return Applications.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
+    return VacancyApplications.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
 
 
 def GetAppCitiesCount(app_id):
-    return CitiesApplications.objects.filter(app_id=app_id).count()
+    return CitiesVacancyApplications.objects.filter(app_id=app_id).count()
 
 
 def GetCities(request):
@@ -32,12 +32,12 @@ def GetCities(request):
     }
 
     # Получаем черновик заявки (без привязки к пользователю)
-    draft_application = GetDraftApplication()
-    if draft_application:
-        context["cities_count"] = GetAppCitiesCount(draft_application.app_id)
-        context["draft_application"] = draft_application
+    draft_vacancy_application = GetDraftVacancyApplication()
+    if draft_vacancy_application:
+        context["cities_count"] = GetAppCitiesCount(draft_vacancy_application.app_id)
+        context["draft_vacancy_application"] = draft_vacancy_application
     else:
-        context["draft_application"] = None
+        context["draft_vacancy_application"] = None
         context["cities_count"] = 0  # Например, можно установить 0, если черновик отсутствует
 
     return render(request, "home_page.html", context)
@@ -56,17 +56,17 @@ def city(request, city_id):
     return render(request, "city_page.html", context)
 
 
-def GetApplicationById(app_id):
-    return get_object_or_404(Applications, app_id=app_id, status=1)
+def GetVacancyApplicationById(app_id):
+    return get_object_or_404(VacancyApplications, app_id=app_id, status=1)
 
 
-def application(request, app_id):
-    cities_applications = CitiesApplications.objects.filter(app_id=app_id)
-    cities_ids = cities_applications.values_list('city_id', flat=True)
+def vacancy_application(request, app_id):
+    cities_vacancy_applications = CitiesVacancyApplications.objects.filter(app_id=app_id)
+    cities_ids = cities_vacancy_applications.values_list('city_id', flat=True)
     cities = Cities.objects.filter(city_id__in=cities_ids, status=1)
 
     cities_with_count = {}
-    for item in cities_applications:
+    for item in cities_vacancy_applications:
         cities_with_count[item.city_id.city_id] = item.count
 
     cities_list = []
@@ -77,36 +77,33 @@ def application(request, app_id):
         })
 
     context = {
-        "application": GetApplicationById(app_id),
+        "vacancy_application": GetVacancyApplicationById(app_id),
         "cities": cities_list
     }
 
-    return render(request, "application_page.html", context)
+    return render(request, "vacancy_application_page.html", context)
 
 
 def add_city_to_draft(request):
     if request.method == 'POST':
         city_id = request.POST.get('city_id')
-        draft_application = GetDraftApplication()
+        draft_vacancy_application = GetDraftVacancyApplication()
 
         # если черновика нет, создаем новый
-        if draft_application is None:
-            draft_application = Applications.objects.create(
+        if draft_vacancy_application is None:
+            draft_vacancy_application = VacancyApplications.objects.create(
                 date_created=timezone.now(),  # Время создания
                 creator=GetCurrentUser(),  # Создатель заявки
                 status=1,  # Статус "Действует"
                 submitted=timezone.now(),  # Установим время подачи
-                completed=None,  # Если не завершена, то None
                 moderator=None,  # Если не модератор, то None
-                vacancy={
-                    "name": "Врач-невролог",
-                    "requirements": "высшее медицинское образование, опыт работы не менее 3-х лет по специальности, клиентоориентированность",
-                    "responsibilities": "оказание квалифицированной лечебно-профилактической помощи детям, ведение амбулаторного приема"
-                }
+                vacancy_name="Врач-невролог",
+                vacancy_requirements="высшее медицинское образование, опыт работы не менее 3-х лет по специальности, клиентоориентированность",
+                vacancy_responsibilities="оказание квалифицированной лечебно-профилактической помощи детям, ведение амбулаторного приема"
             )
 
         # есть ли уже этот город в черновике
-        existing_entry = CitiesApplications.objects.filter(app_id=draft_application, city_id=city_id).first()
+        existing_entry = CitiesVacancyApplications.objects.filter(app_id=draft_vacancy_application, city_id=city_id).first()
 
         if existing_entry:
             # увеличиваем, если город уже есть в заявке
@@ -114,8 +111,8 @@ def add_city_to_draft(request):
             existing_entry.save()
         else:
             # если города нет в заявке, создаем новую запись
-            CitiesApplications.objects.create(
-                app_id=draft_application,
+            CitiesVacancyApplications.objects.create(
+                app_id=draft_vacancy_application,
                 city_id=Cities.objects.get(city_id=city_id),
                 count=1  # Начинаем с 1
             )
@@ -125,15 +122,15 @@ def add_city_to_draft(request):
     return HttpResponseRedirect(reverse('home_page'))
 
 
-def delete_application(request):
+def delete_vacancy_application(request):
     if request.method == 'POST':
         app_id = request.POST.get('app_id')
 
         # проверяем, существует ли заявка с таким ID
-        application = Applications.objects.filter(app_id=app_id).first()
-        if application:
+        vacancy_application = VacancyApplications.objects.filter(app_id=app_id).first()
+        if vacancy_application:
             # выполняем SQL-запрос для изменения статуса заявки на "Удалена"
             with connection.cursor() as cursor:
-                cursor.execute("UPDATE applications SET status = 2 WHERE app_id = %s", [app_id])
+                cursor.execute("UPDATE vacancy_applications SET status = 2 WHERE app_id = %s", [app_id])
 
         return HttpResponseRedirect(reverse('home_page'))

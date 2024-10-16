@@ -22,9 +22,9 @@
                         <button type="submit" class="search-button">Найти</button>
                     </div>
                     <div class="col-md-2">
-                        {% if draft_application %}
+                        {% if draft_vacancy_application %}
                             <!-- Если черновик заявки существует -->
-                            <a href="/applications/{{ draft_application.app_id }}/" class="btn-favorites">
+                            <a href="/vacancy_applications/{{ draft_vacancy_application.app_id }}/" class="btn-favorites">
                                 <img src="{% static 'images/favorites-btn.png' %}" alt="Избранное" />
                                 <div class="badge position-absolute badge rounded-pill">
                                     {{ cities_count }}

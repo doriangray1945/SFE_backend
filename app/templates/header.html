@@ -4,7 +4,7 @@
     <nav class="container d-flex align-items-center justify-content-between">
         <div class="logo">SFE</div>
     
-        {% if "http://localhost:8000/applications/" in request.build_absolute_uri or "http://localhost:8000/cities/" in request.build_absolute_uri %}
+        {% if "http://localhost:8000/vacancy_applications/" in request.build_absolute_uri or "http://localhost:8000/cities/" in request.build_absolute_uri %}
             <a href="/" class="home-btn">
                 <img src="{% static 'images/home-btn.png' %}" alt="Домой" />
             </a>

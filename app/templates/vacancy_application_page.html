@@ -9,9 +9,9 @@
                 <div class="col-md-8">
                     <h1>Вакансия</h1>
                     <div style="height: 26px;"></div>
-                    <h4><strong>Название: </strong>{{ application.vacancy.name }}</h4>
-                    <h4><strong>Обязанности: </strong>{{ application.vacancy.responsibilities }}</h4>
-                    <h4><strong>Требования: </strong>{{ application.vacancy.requirements }}</h4>
+                    <h4><strong>Название: </strong>{{ vacancy_application.vacancy_name }}</h4>
+                    <h4><strong>Обязанности: </strong>{{ vacancy_application.vacancy_responsibilities }}</h4>
+                    <h4><strong>Требования: </strong>{{ vacancy_application.vacancy_requirements }}</h4>
                 </div>
                 <div class="col-md-4">
                     <img src="{% static 'images/favorites.png' %}" class="intro-image">
@@ -31,9 +31,9 @@
  
         </div>
     
-        <form action="{% url 'delete_application' %}" method="POST">
+        <form action="{% url 'delete_vacancy_application' %}" method="POST">
             {% csrf_token %}
-            <input type="hidden" name="app_id" value="{{ application.app_id }}">
+            <input type="hidden" name="app_id" value="{{ vacancy_application.app_id }}">
             <div class="common-btn-container">
                 <button type="submit" class="common-btn">Удалить заявку</button>
             </div>
