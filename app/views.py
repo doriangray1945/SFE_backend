@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.db import connection
 
 
+"""
 def GetCurrentUser():
     return User.objects.filter(is_superuser=False).first()
 
@@ -142,7 +143,7 @@ def delete_application(request):
             with connection.cursor() as cursor:
                 cursor.execute("UPDATE applications SET status = 2 WHERE app_id = %s", [app_id])
 
-        return HttpResponseRedirect(reverse('home_page'))
+        return HttpResponseRedirect(reverse('home_page'))"""
 
 
 # Лаб 3
@@ -155,11 +156,86 @@ def user():
     return user1
 
 
-class CitiesList(APIView):
+def GetCurrentUser():
+    return User.objects.filter(is_superuser=False).first()
+
+
+def GetDraftVacancyApplication():
+    current_user = GetCurrentUser()
+    return VacancyApplications.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
+
+
+# GET список. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки в статусе черновик
+@api_view(["GET"])
+def CitiesList(request):
+    city_name = request.GET.get('city_name', '')
+    cities = Cities.objects.filter(status=1, name__istartswith=city_name)
+    serializer = CitiesSerializer(cities, many=True)
+    draft_vacancy_application = GetDraftVacancyApplication()
+    response = {
+        "cities": serializer.data,
+        "draft_vacancy_application": draft_vacancy_application
+    }
+    return Response(response, status=status.HTTP_200_OK)
+
+
+# GET одна запись
+@api_view(["GET"])
+def GetCityById(request, city_id):
+    try:
+        city = Cities.objects.get(city_id=city_id, status=1)
+    except Cities.DoesNotExist:
+        return Response({"Ошибка": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = CitiesSerializer(city, many=False)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# POST добавление
+@api_view(["POST"])
+def CreateCity(request):
+    city_data = request.data.copy()
+    city_data.pop('image', None)
+
+    serializer = CitiesSerializer(data=city_data)
+    serializer.is_valid(raise_exception=True)  # Проверка валидности с автоматической обработкой ошибок
+    new_city = serializer.save()  # Сохраняем новую деталь
+    # Обновляем и возвращаем данные с новой деталью
+    return Response(CitiesSerializer(new_city).data, status=status.HTTP_201_CREATED)
+
+
+# PUT изменение
+@api_view(["PUT"])
+def EditCity(request, city_id):
+    try:
+        city = Cities.objects.get(city_id=city_id)
+    except Cities.DoesNotExist:
+        return Response({"Ошибка": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+    city_data = request.data.copy()
+    city_data.pop('image', None)
+
+    serializer = CitiesSerializer(city, data=city_data)
+    serializer.is_valid(raise_exception=True)
+    edited_city = serializer.save()
+
+    # Обработка изменения изображения, если оно предоставлено
+    pic = request.FILES.get("pic")
+    if pic:
+        pic_result = add_pic(edited_city, pic)
+        if 'error' in pic_result.data:
+            return pic_result  # Возвращаем ошибку, если загрузка изображения не удалась
+
+    # Возвращаем обновлённые данные детали
+    return Response(CitiesSerializer(edited_city).data, status=status.HTTP_200_OK)
+
+
+"""
     model_class = Cities
     serializer_class = CitiesSerializer
 
-    # Возвращает список акций
+    # GET список. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки в статусе черновик
     def get(self, request):
         cities = self.model_class.objects.all()
         serializer = self.serializer_class(cities, many=True)
@@ -238,4 +314,5 @@ class UsersList(APIView):
     def get(self, request, format=None):
         user = self.model_class.objects.all()
         serializer = self.serializer_class(user, many=True)
-        return Response(serializer.data)
+
+        return Response(serializer.data)"""

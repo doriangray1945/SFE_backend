@@ -1,4 +1,4 @@
-from app.models import Cities, Applications, CitiesApplications
+from app.models import Cities, VacancyApplications, CitiesVacancyApplications
 from app.models import AuthUser
 from rest_framework import serializers
 
@@ -10,7 +10,7 @@ class CitiesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cities
         # Сериализуем все поля
-        fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url", "status", "user"]
+        fields = '__all__'
 
 
 class UserSerializer(serializers.ModelSerializer):
