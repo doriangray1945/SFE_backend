@@ -23,11 +23,11 @@ def GetAppCitiesCount(app_id):
 
 
 def GetCities(request):
-    search_name = request.GET.get("search_name", "")
-    cities = Cities.objects.filter(name__istartswith=search_name, status=1)
+    city_name = request.GET.get("city_name", "")
+    cities = Cities.objects.filter(name__istartswith=city_name, status=1)
 
     context = {
-        "search_name": search_name,  # запоминание ввода для поиска
+        "city_name": city_name,  # запоминание ввода для поиска
         "cities": cities
     }
 
@@ -57,10 +57,17 @@ def city(request, city_id):
 
 
 def GetVacancyApplicationById(app_id):
-    return get_object_or_404(VacancyApplications, app_id=app_id, status=1)
+    try:
+        return VacancyApplications.objects.get(app_id=app_id, status=1)
+    except VacancyApplications.DoesNotExist:
+        return None
 
 
 def vacancy_application(request, app_id):
+    vacancy_application = GetVacancyApplicationById(app_id)
+    if not vacancy_application:
+        return HttpResponseRedirect(reverse('home_page'))
+
     cities_vacancy_applications = CitiesVacancyApplications.objects.filter(app_id=app_id)
     cities_ids = cities_vacancy_applications.values_list('city_id', flat=True)
     cities = Cities.objects.filter(city_id__in=cities_ids, status=1)
@@ -77,7 +84,7 @@ def vacancy_application(request, app_id):
         })
 
     context = {
-        "vacancy_application": GetVacancyApplicationById(app_id),
+        "vacancy_application": vacancy_application,
         "cities": cities_list
     }
 
