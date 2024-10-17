@@ -52,9 +52,9 @@ class VacancyApplications(models.Model):
 
 class CitiesVacancyApplications(models.Model):
     mm_id = models.AutoField(primary_key=True)
-    city_id = models.ForeignKey('Cities', models.DO_NOTHING, blank=True, null=True)
-    app_id = models.ForeignKey('VacancyApplications', models.DO_NOTHING, blank=True, null=True)
-    count = models.IntegerField(default=1, blank=True, null=True)
+    city_id = models.ForeignKey('Cities', models.DO_NOTHING, blank=False, null=False)
+    app_id = models.ForeignKey('VacancyApplications', models.DO_NOTHING, blank=False, null=False)
+    count = models.IntegerField(default=1, blank=False, null=False)
 
     class Meta:
         managed = True
