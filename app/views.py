@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.db import connection
+from django.utils.dateparse import parse_datetime
 
 
 """
@@ -160,18 +161,23 @@ def GetCurrentUser():
     return User.objects.filter(is_superuser=False).first()
 
 
+def GetModerator():
+    return User.objects.filter(is_superuser=True).first()
+
+
 def GetDraftVacancyApplication():
     current_user = GetCurrentUser()
     return VacancyApplications.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
 
 
+#ДОМЕН УСЛУГИ
 # GET список. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки в статусе черновик
 @api_view(["GET"])
 def CitiesList(request):
     city_name = request.GET.get('city_name', '')
     cities = Cities.objects.filter(status=1, name__istartswith=city_name)
     serializer = CitiesSerializer(cities, many=True)
-    draft_vacancy_application = GetDraftVacancyApplication()
+    draft_vacancy_application = GetDraftVacancyApplication().app_id
     response = {
         "cities": serializer.data,
         "draft_vacancy_application": draft_vacancy_application
@@ -231,88 +237,224 @@ def EditCity(request, city_id):
     return Response(CitiesSerializer(edited_city).data, status=status.HTTP_200_OK)
 
 
-"""
-    model_class = Cities
-    serializer_class = CitiesSerializer
+# DELETE удаление. Удаление изображения встроено в метод удаления услуги
+@api_view(["DELETE"])
+def DeleteCity(request, city_id):
+    try:
+        city = Cities.objects.get(city_id=city_id)
+    except Cities.DoesNotExist:
+        return Response({"Ошибка": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
 
-    # GET список. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки в статусе черновик
-    def get(self, request):
-        cities = self.model_class.objects.all()
-        serializer = self.serializer_class(cities, many=True)
-        return Response(serializer.data)
+    city.status = 2
+    city.save()
 
-    # Добавляет новую акцию
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            city = serializer.save()
+    cities = Cities.objects.filter(status=1)
+    serializer = CitiesSerializer(cities, many=True)
+    return Response(serializer.data)
 
-            user1 = user()
-            # Назначаем создателем акции польователя user1
-            city.user = user1
-            city.save()
 
-            pic = request.FILES.get("pic")
-            pic_result = add_pic(city, pic)
-            # Если в результате вызова add_pic результат - ошибка, возвращаем его.
-            if 'error' in pic_result.data:
-                return pic_result
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# POST добавления в заявку-черновик. Заявка создается пустой, указывается автоматически создатель, дата создания и статус, остальные поля указываются через PUT или смену статуса
+@api_view(["POST"])
+def AddCityToDraft(request, city_id):
+    try:
+        city = Cities.objects.get(city_id=city_id)
+    except Cities.DoesNotExist:
+        return Response({"error": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
 
-class CitiesDetail(APIView):
-    model_class = Cities
-    serializer_class = FullCitiesSerializer
+    draft_vacancy_application = GetDraftVacancyApplication()
 
-    # Возвращает информацию об акции
-    def get(self, request, city_id):
-        city = get_object_or_404(self.model_class, city_id=city_id)
-        serializer = self.serializer_class(city)
-        return Response(serializer.data)
+    # если черновика нет, создаем новый
+    if draft_vacancy_application is None:
+        draft_vacancy_application = VacancyApplications.objects.create(
+            date_created=timezone.now(),  # Время создания
+            creator=GetCurrentUser(),  # Создатель заявки
+            status=1,  # Статус "Действует"
+        )
 
-    # Обновляет информацию об акции (для модератора)
-    def put(self, request, city_id):
-        city = get_object_or_404(self.model_class, city_id=city_id)
-        serializer = self.serializer_class(city, data=request.data, partial=True)
-        # Изменение фото логотипа
-        if 'pic' in serializer.initial_data:
-            pic_result = add_pic(city, serializer.initial_data['pic'])
-            if 'error' in pic_result.data:
-                return pic_result
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # есть ли уже этот город в черновике
+    existing_entry = CitiesVacancyApplications.objects.filter(app_id=draft_vacancy_application, city_id=city_id).first()
 
-    # Удаляет информацию об акции
-    def delete(self, request, city_id):
-        city = get_object_or_404(self.model_class, city_id=city_id)
-        city.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    if existing_entry:
+        # увеличиваем, если город уже есть в заявке
+        existing_entry.count += 1
+        existing_entry.save()
+    else:
+        # если города нет в заявке, создаем новую запись
+        try:
+            CitiesVacancyApplications.objects.create(
+                app_id=draft_vacancy_application,
+                city_id=Cities.objects.get(city_id=city_id),
+                count=1  # Начинаем с 1
+            )
+        except Exception as e:
+            return Response({"error": f"Ошибка при создании связки: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Обновляет информацию об акции (для пользователя)
-@api_view(['Put'])
-def put(self, request, city_id):
-    city = get_object_or_404(self.model_class, city_id=city_id)
-    serializer = self.serializer_class(city, data=request.data, partial=True)
+    serializer = VacancyApplicationsSerializer(draft_vacancy_application)
 
-    if 'pic' in serializer.initial_data:
-        pic_result = add_pic(city, serializer.initial_data['pic'])
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# POST добавление изображения. Добавление изображения по id услуги, старое изображение заменяется/удаляется. minio только в этом методе и удалении!
+@api_view(["POST"])
+def UpdateCityImage(request, city_id):
+    try:
+        city = Cities.objects.get(city_id=city_id)
+    except Cities.DoesNotExist:
+        return Response({"Ошибка": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+    image = request.FILES.get("image")
+
+    if image is not None:
+        # Заменяем старое изображение
+        pic_result = add_pic(city, image)  # Используем функцию add_pic для загрузки нового изображения
         if 'error' in pic_result.data:
-            return pic_result
+            return pic_result  # Если произошла ошибка, возвращаем её
+
+        serializer = CitiesSerializer(city)  # Обновляем сериализатор
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    return Response({"Ошибка": "Изображение не предоставлено"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+#ДОМЕН ЗАЯВКИ
+#GET список (кроме удаленных и черновика, поля модератора и создателя через логины) с фильтрацией по диапазону даты формирования и статусу
+@api_view(["GET"])
+def VacancyApplicationsList(request):
+    status = int(request.GET.get("status", 0))
+    date_submitted_start = request.GET.get("date_submitted_start")
+    date_submitted_end = request.GET.get("date_submitted_end")
+
+    vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
+
+    if status:
+        vacancy_applications = vacancy_applications.filter(status=status)
+
+    if date_submitted_start and parse_datetime(date_submitted_start):
+        vacancy_applications = vacancy_applications.filter(submitted__gte=parse_datetime(date_submitted_start))
+
+    if date_submitted_end and parse_datetime(date_submitted_end):
+        vacancy_applications = vacancy_applications.filter(submitted__lt=parse_datetime(date_submitted_end))
+
+    serializer = VacancyApplicationsSerializer(vacancy_applications, many=True)
+
+    return Response(serializer.data)
+
+
+# GET одна запись (поля заявки + ее услуги). При получении заявки возвращется список ее услуг с картинками
+@api_view(["GET"])
+def GetVacancyApplicationById(request, app_id):
+    try:
+        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+    except VacancyApplications.DoesNotExist:
+        return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+    vacancy_application_serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
+
+    cities_vacancy_applications = CitiesVacancyApplications.objects.filter(app_id=app_id)
+    cities_serializer = CitiesVacancyApplicationsSerializer(cities_vacancy_applications, many=True)
+
+    response_data = {
+        'vacancy_application': vacancy_application_serializer.data,
+        'cities': cities_serializer.data
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+# PUT изменения полей заявки по теме
+@api_view(["PUT"])
+def UpdateVacancyApplication(request, app_id):
+    try:
+        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+    except VacancyApplications.DoesNotExist:
+        return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+    allowed_fields = ['vacancy_name', 'vacancy_responsibilities', 'vacancy_requirements']
+
+    data = {key: value for key, value in request.data.items() if key in allowed_fields}
+
+    if not data:
+        return Response({"Ошибка": "Нет данных для обновления или поля не разрешены"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = VacancyApplicationsSerializer(vacancy_application, data=data, partial=True)
 
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UsersList(APIView):
-    model_class = AuthUser
-    serializer_class = UserSerializer
+# PUT сформировать создателем (дата формирования). Происходит проверка на обязательные поля
+@api_view(["PUT"])
+def UpdateStatusUser(request, app_id):
+    try:
+        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+    except VacancyApplications.DoesNotExist:
+        return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request, format=None):
-        user = self.model_class.objects.all()
-        serializer = self.serializer_class(user, many=True)
+    if vacancy_application.status == 1:
+        return Response({"Ошибка": "Заявку нельзя изменить, так как она не в статусе 'Черновик'"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        return Response(serializer.data)"""
+    required_fields = ['vacancy_name', 'vacancy_responsibilities', 'vacancy_requirements']
+
+    missing_fields = [field for field in required_fields if not getattr(vacancy_application, field)]
+
+    if missing_fields:
+        return Response(
+            {"Ошибка": f"Не заполнены обязательные поля: {', '.join(missing_fields)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    vacancy_application.status = 3
+    vacancy_application.submitted = timezone.now()
+    vacancy_application.save()
+
+    serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# PUT завершить/отклонить модератором. При завершить/отклонении заявки проставляется модератор и дата завершения. Одно из доп. полей заявки или м-м рассчитывается при завершении заявки (вычисление стоимости заказа, даты доставки в течении месяца, вычисления в м-м).
+@api_view(["PUT"])
+def UpdateStatusAdmin(request, app_id):
+    try:
+        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+    except VacancyApplications.DoesNotExist:
+        return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+    request_status = int(request.data["status"])
+
+    if request_status not in [4, 5]:
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    if vacancy_application.status != 3:
+        return Response({"Ошибка": "Заявка ещё не сформирована"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    vacancy_application.completed = timezone.now()
+    vacancy_application.status = request_status
+    vacancy_application.moderator = GetModerator()
+    vacancy_application.save()
+
+    serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
+
+    return Response(serializer.data)
+
+
+# DELETE удаление (дата формирования)
+@api_view(["DELETE"])
+def DeleteVacancyApplication(request, app_id):
+    try:
+        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+    except VacancyApplications.DoesNotExist:
+        return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+    if vacancy_application.status == 1:
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    vacancy_application.status = 2
+    vacancy_application.save()
+
+    serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
+
+    return Response(serializer.data)
