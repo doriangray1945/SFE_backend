@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from datetime import datetime, time
 
 class Cities(models.Model):
     STATUS_CHOICES = [
@@ -62,23 +61,3 @@ class CitiesVacancyApplications(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['city_id', 'app_id'], name='unique constraint')
         ]
-
-
-class AuthUser(models.Model):
-    password = models.CharField(max_length=128)
-    last_login = models.DateTimeField(blank=True, null=True)
-    is_superuser = models.BooleanField(default=False)
-    username = models.CharField(unique=True, max_length=150)
-    last_name = models.CharField(max_length=150)
-    email = models.CharField(max_length=254)
-    is_staff = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    date_joined = models.DateTimeField(auto_now=True)
-    first_name = models.CharField(max_length=150)
-
-    def __str__(self):
-        return f'{self.first_name} {self.last_name}'
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user'

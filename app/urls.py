@@ -25,14 +25,11 @@ urlpatterns = [
     path('vacancy_applications/<int:app_id>/update_status_admin/', views.UpdateStatusAdmin, name='update_status_admin'),
     path('vacancy_applications/<int:app_id>/delete_vacancy_application/', views.DeleteVacancyApplication, name='delete_vacancy_application'),
 
+    path('cities_vacancy_applications/<int:mm_id>/delete_city_from_vacancy_application/', views.DeleteCityFromVacancyApplication, name='delete_city_from_vacancy_application'),
+    path('cities_vacancy_applications/<int:mm_id>/update_vacancy_application/', views.UpdateVacancyApplication, name='update_vacancy_application'),
 
-
-
-
+    path('users/register/', views.register, name='register'),
+    path('users/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
+    path('users/login/', views.login, name='login'),
+    path('users/logout/', views.logout_view, name='logout'),
 ]
-
-"""path(r'cities/<int:city_id>/', views.CitiesDetail.as_view(), name='stocks-detail'),
-    path(r'cities/<int:city_id>/put/', views.put, name='cities-put'),
-
-
-    path(r'users/', views.UsersList.as_view(), name='users-list'),"""
