@@ -24,16 +24,24 @@ def GetDraftVacancyApplication():
 
 
 #ДОМЕН УСЛУГИ
-# GET список. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки в статусе черновик
+# GET список с фильтрацией. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки и количество услуг в этой заявке
 @api_view(["GET"])
 def CitiesList(request):
-    city_name = request.GET.get('city_name', '')
+    city_name = request.GET.get("city_name", '')
     cities = Cities.objects.filter(status=1, name__istartswith=city_name)
     serializer = CitiesSerializer(cities, many=True)
-    draft_vacancy_application = GetDraftVacancyApplication().app_id
+
+    if GetDraftVacancyApplication():
+        app_id = GetDraftVacancyApplication().app_id
+        count = CitiesVacancyApplications.objects.filter(app_id=app_id).count()
+    else:
+        app_id = None
+        count = 0
+
     response = {
         "cities": serializer.data,
-        "draft_vacancy_application": draft_vacancy_application
+        "draft_vacancy_application": app_id,
+        "count": count,
     }
     return Response(response, status=status.HTTP_200_OK)
 
@@ -75,12 +83,12 @@ def EditCity(request, city_id):
     city_data = request.data.copy()
     city_data.pop('image', None)
 
-    serializer = CitiesSerializer(city, data=city_data)
+    serializer = CitiesSerializer(city, data=city_data, partial=True)
     serializer.is_valid(raise_exception=True)
     edited_city = serializer.save()
 
     # Обработка изменения изображения, если оно предоставлено
-    pic = request.FILES.get("pic")
+    pic = request.FILES.get("image")
     if pic:
         pic_result = add_pic(edited_city, pic)
         if 'error' in pic_result.data:
@@ -247,7 +255,7 @@ def UpdateStatusUser(request, app_id):
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    if vacancy_application.status == 1:
+    if vacancy_application.status != 1:
         return Response({"Ошибка": "Заявку нельзя изменить, так как она не в статусе 'Черновик'"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     required_fields = ['vacancy_name', 'vacancy_responsibilities', 'vacancy_requirements']
@@ -413,6 +421,7 @@ def login(request):
 # POST деавторизация
 @api_view(["POST"])
 def logout_view(request):
+    # request.user.auth_token.delete()
     logout(request)
 
     return Response(status=status.HTTP_200_OK)

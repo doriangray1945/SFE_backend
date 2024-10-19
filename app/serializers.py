@@ -1,19 +1,32 @@
 from .models import *
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from app import views
 
 
 class CitiesSerializer(serializers.ModelSerializer):
-    """# StringRelatedField вернет строковое представление объекта, то есть его имя"""
-    user = serializers.StringRelatedField(read_only=True)
+    """# StringRelatedField вернет строковое представление объекта, то есть его имя
+    user = serializers.StringRelatedField(read_only=True)"""
+    #count = serializers.SerializerMethodField()
 
     class Meta:
         model = Cities
         #fields = '__all__'
-        fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url", "status", "user"]
+        fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url", "status"]
+
+    """def get_count(self, obj):
+        # Получаем черновое приложение вакансии
+        draft_vacancy_application = views.GetDraftVacancyApplication()
+        if draft_vacancy_application:
+            city_vacancy_application = CitiesVacancyApplications.objects.filter(app_id=draft_vacancy_application.app_id, city_id=obj).first()
+            if city_vacancy_application:
+                return city_vacancy_application.count
+        return 0  # Возвращаем 0, если чернового приложения вакансии нет"""
 
 
 class VacancyApplicationsSerializer(serializers.ModelSerializer):
+    #creator = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
+
     class Meta:
         model = VacancyApplications
         fields = "__all__"
