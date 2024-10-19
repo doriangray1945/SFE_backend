@@ -18,7 +18,7 @@ urlpatterns = [
 
     path('vacancy_applications/', views.VacancyApplicationsList, name='vacancy_applications_list'),
     path('vacancy_applications/<int:app_id>/', views.GetVacancyApplicationById, name='get_vacancy_application_by_id'),
-    path('vacancy_applications/<int:app_id>/update_vacancy_application/', views.UpdateVacancyApplication, name='update_vacancy_application'),
+    path('vacancy_applications/<int:app_id>/update_vacancy/', views.UpdateVacancy, name='update_vacancy'),
     path('vacancy_applications/<int:app_id>/update_status_user/', views.UpdateStatusUser, name='update_status_user'),
     path('vacancy_applications/<int:app_id>/update_status_admin/', views.UpdateStatusAdmin, name='update_status_admin'),
     path('vacancy_applications/<int:app_id>/delete_vacancy_application/', views.DeleteVacancyApplication, name='delete_vacancy_application'),

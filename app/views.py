@@ -225,7 +225,7 @@ def GetVacancyApplicationById(request, app_id):
 
 # PUT изменения полей заявки по теме
 @api_view(["PUT"])
-def UpdateVacancyApplication(request, app_id):
+def UpdateVacancy(request, app_id):
     try:
         vacancy_application = VacancyApplications.objects.get(app_id=app_id)
     except VacancyApplications.DoesNotExist:
