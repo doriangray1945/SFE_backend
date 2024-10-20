@@ -63,7 +63,7 @@ class CitiesVacancyApplications(models.Model):
         ]
 
 
-class NewUserManager(UserManager):
+"""class NewUserManager(UserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('User must have an email address')
@@ -99,4 +99,4 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
 
-    objects = NewUserManager()
+    objects = NewUserManager()"""

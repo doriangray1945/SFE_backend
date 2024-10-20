@@ -1,14 +1,15 @@
 from django.urls import include, path
 from app import views
 from rest_framework import routers, permissions
-
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
 
 router = routers.DefaultRouter()
 
+router.register(r'user', views.UserViewSet, basename='user')
 
+# схема swagger
 schema_view = get_schema_view(
    openapi.Info(
       title="Snippets API",
@@ -22,12 +23,9 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
-
 urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 
     path('cities/', views.CitiesList, name='cities_list'),
     path('cities/<int:city_id>/', views.GetCityById, name='get_city_by_id'),
@@ -47,8 +45,9 @@ urlpatterns = [
     path('cities_vacancy_applications/<int:mm_id>/delete_city_from_vacancy_application/', views.DeleteCityFromVacancyApplication, name='delete_city_from_vacancy_application'),
     path('cities_vacancy_applications/<int:mm_id>/update_vacancy_application/', views.UpdateVacancyApplication, name='update_vacancy_application'),
 
-    path('users/register/', views.register, name='register'),
-    path('users/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
-    path('users/login/', views.login, name='login'),
-    path('users/logout/', views.logout_view, name='logout'),
+    path('user/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]

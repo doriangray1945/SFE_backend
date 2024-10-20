@@ -39,6 +39,13 @@ class VacancyApplicationsSerializer(serializers.ModelSerializer):
         model = VacancyApplications
         fields = "__all__"
 
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields
+
 
 class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
     city_id = CitiesSerializer()  # Включаем сериализатор для города
@@ -47,6 +54,13 @@ class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CitiesVacancyApplications
         fields = ["mm_id", "app_id", "city_id", "count"]
+
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields
 
 
 """class UserSerializer(serializers.ModelSerializer):
@@ -60,33 +74,16 @@ class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     is_staff = serializers.BooleanField(default=False, required=False)
     is_superuser = serializers.BooleanField(default=False, required=False)
+
     class Meta:
-        model = CustomUser
+        #model = CustomUser
         #fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username") # Для PUT пользователя
-        fields = ["email", "password", "is_staff", "is_superuser"]
-
-
-class UserRegisterSerializer(serializers.ModelSerializer):
-    class Meta:
         model = User
-        fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username")
-        write_only_fields = ("password",)
-        read_only_fields = ("id",)
+        fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username", "is_staff", "is_superuser") # Для PUT пользователя
 
-    def create(self, validated_data):
-        user = User.objects.create(
-            email=validated_data['email'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            username=validated_data['username']
-        )
-
-        user.set_password(validated_data['password'])
-        user.save()
-
-        return user
-
-
-class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields

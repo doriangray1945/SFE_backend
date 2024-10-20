@@ -3,3 +3,4 @@ minio
 djangorestframework==3.15.2
 psycopg==3.1.9
 drf_yasg
+redis

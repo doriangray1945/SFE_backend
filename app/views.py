@@ -1,40 +1,51 @@
+from urllib import request
+
 from rest_framework.response import Response
 from rest_framework import status
 from app.serializers import *
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from .minio import add_pic
 from app.models import *
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.contrib.auth import authenticate, logout
 
 from drf_yasg.utils import swagger_auto_schema
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponse
+
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework import viewsets
+import redis
+from django.conf import settings
+import uuid
+from django.views.decorators.csrf import csrf_exempt
+from app.permissions import IsAdmin, IsManager
+from rest_framework.authentication import SessionAuthentication
 
 
-def GetCurrentUser():
-    return User.objects.filter(is_superuser=False).first()
+# класс аутентификации, который исключает CSRF для сессий
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return  # Отключаем CSRF-проверку
 
 
-def GetModerator():
-    return User.objects.filter(is_superuser=True).first()
-
-
-def GetDraftVacancyApplication():
-    current_user = GetCurrentUser()
+def GetDraftVacancyApplication(request):
+    current_user = request.user
     return VacancyApplications.objects.filter(creator=current_user.id, status=1).first()  # так как у пользователя только один черновик, то берем первый элемент, иначе None
 
 
 #ДОМЕН УСЛУГИ
 # GET список с фильтрацией. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки и количество услуг в этой заявке
 @api_view(["GET"])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def CitiesList(request):
     city_name = request.GET.get("city_name", '')
     cities = Cities.objects.filter(status=1, name__istartswith=city_name)
     serializer = CitiesSerializer(cities, many=True)
 
-    if GetDraftVacancyApplication():
-        app_id = GetDraftVacancyApplication().app_id
+    if GetDraftVacancyApplication(request):
+        app_id = GetDraftVacancyApplication(request).app_id
         count = CitiesVacancyApplications.objects.filter(app_id=app_id).count()
     else:
         app_id = None
@@ -50,6 +61,7 @@ def CitiesList(request):
 
 # GET одна запись
 @api_view(["GET"])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def GetCityById(request, city_id):
     try:
         city = Cities.objects.get(city_id=city_id, status=1)
@@ -61,22 +73,27 @@ def GetCityById(request, city_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@swagger_auto_schema(method='post', request_body=CitiesSerializer)
 # POST добавление
+@swagger_auto_schema(method='post', request_body=CitiesSerializer)
 @api_view(["POST"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAdmin])
 def CreateCity(request):
     city_data = request.data.copy()
     city_data.pop('image', None)
 
     serializer = CitiesSerializer(data=city_data)
-    serializer.is_valid(raise_exception=True)  # Проверка валидности с автоматической обработкой ошибок
-    new_city = serializer.save()  # Сохраняем новую деталь
-    # Обновляем и возвращаем данные с новой деталью
+    serializer.is_valid(raise_exception=True)
+    new_city = serializer.save()
+
     return Response(CitiesSerializer(new_city).data, status=status.HTTP_201_CREATED)
 
 
 # PUT изменение
+@swagger_auto_schema(method='put', request_body=CitiesSerializer)
 @api_view(["PUT"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAdmin])
 def EditCity(request, city_id):
     try:
         city = Cities.objects.get(city_id=city_id)
@@ -103,6 +120,8 @@ def EditCity(request, city_id):
 
 # DELETE удаление. Удаление изображения встроено в метод удаления услуги
 @api_view(["DELETE"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAdmin])
 def DeleteCity(request, city_id):
     try:
         city = Cities.objects.get(city_id=city_id)
@@ -118,20 +137,23 @@ def DeleteCity(request, city_id):
 
 
 # POST добавления в заявку-черновик. Заявка создается пустой, указывается автоматически создатель, дата создания и статус, остальные поля указываются через PUT или смену статуса
+@swagger_auto_schema(method='post', request_body=VacancyApplicationsSerializer)
 @api_view(["POST"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def AddCityToDraft(request, city_id):
     try:
         city = Cities.objects.get(city_id=city_id)
     except Cities.DoesNotExist:
         return Response({"error": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
 
-    draft_vacancy_application = GetDraftVacancyApplication()
+    draft_vacancy_application = GetDraftVacancyApplication(request)
 
     # если черновика нет, создаем новый
     if draft_vacancy_application is None:
         draft_vacancy_application = VacancyApplications.objects.create(
             date_created=timezone.now(),  # Время создания
-            creator=GetCurrentUser(),  # Создатель заявки
+            creator=request.user,  # Создатель заявки
             status=1,  # Статус "Действует"
         )
 
@@ -159,7 +181,10 @@ def AddCityToDraft(request, city_id):
 
 
 # POST добавление изображения. Добавление изображения по id услуги, старое изображение заменяется/удаляется. minio только в этом методе и удалении!
+@swagger_auto_schema(method='post', request_body=CitiesSerializer)
 @api_view(["POST"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAdmin])
 def UpdateCityImage(request, city_id):
     try:
         city = Cities.objects.get(city_id=city_id)
@@ -184,12 +209,18 @@ def UpdateCityImage(request, city_id):
 #ДОМЕН ЗАЯВКИ
 #GET список (кроме удаленных и черновика, поля модератора и создателя через логины) с фильтрацией по диапазону даты формирования и статусу
 @api_view(["GET"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def VacancyApplicationsList(request):
     status = int(request.GET.get("status", 0))
     date_submitted_start = request.GET.get("date_submitted_start")
     date_submitted_end = request.GET.get("date_submitted_end")
 
-    vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
+    if request.user.is_staff:
+        vacancy_applications = VacancyApplications.objects.all()
+    else:
+        vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
+        vacancy_applications = vacancy_applications.filter(creator=request.user)
 
     if status:
         vacancy_applications = vacancy_applications.filter(status=status)
@@ -207,9 +238,14 @@ def VacancyApplicationsList(request):
 
 # GET одна запись (поля заявки + ее услуги). При получении заявки возвращется список ее услуг с картинками
 @api_view(["GET"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def GetVacancyApplicationById(request, app_id):
     try:
-        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+        if request.user.is_staff:
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+        else:
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user)
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -227,10 +263,16 @@ def GetVacancyApplicationById(request, app_id):
 
 
 # PUT изменения полей заявки по теме
+@swagger_auto_schema(method='put', request_body=VacancyApplicationsSerializer)
 @api_view(["PUT"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def UpdateVacancy(request, app_id):
     try:
-        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+        if request.user.is_staff:
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+        else:
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user, status=1)
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -251,10 +293,16 @@ def UpdateVacancy(request, app_id):
 
 
 # PUT сформировать создателем (дата формирования). Происходит проверка на обязательные поля
+@swagger_auto_schema(method='put', request_body=VacancyApplicationsSerializer)
 @api_view(["PUT"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def UpdateStatusUser(request, app_id):
     try:
-        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+        if request.user.is_staff:
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+        else:
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user, status=1)
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -279,9 +327,11 @@ def UpdateStatusUser(request, app_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@swagger_auto_schema(method='put', request_body=VacancyApplicationsSerializer)
 # PUT завершить/отклонить модератором. При завершить/отклонении заявки проставляется модератор и дата завершения. Одно из доп. полей заявки или м-м рассчитывается при завершении заявки (вычисление стоимости заказа, даты доставки в течении месяца, вычисления в м-м).
+@swagger_auto_schema(method='put', request_body=VacancyApplicationsSerializer)
 @api_view(["PUT"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsManager])
 def UpdateStatusAdmin(request, app_id):
     try:
         vacancy_application = VacancyApplications.objects.get(app_id=app_id)
@@ -298,7 +348,7 @@ def UpdateStatusAdmin(request, app_id):
 
     vacancy_application.completed = timezone.now()
     vacancy_application.status = request_status
-    vacancy_application.moderator = GetModerator()
+    vacancy_application.moderator = request.user
     vacancy_application.save()
 
     serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
@@ -308,6 +358,8 @@ def UpdateStatusAdmin(request, app_id):
 
 # DELETE удаление (дата формирования)
 @api_view(["DELETE"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsManager])
 def DeleteVacancyApplication(request, app_id):
     try:
         vacancy_application = VacancyApplications.objects.get(app_id=app_id)
@@ -328,6 +380,8 @@ def DeleteVacancyApplication(request, app_id):
 # Домен м-м
 # DELETE удаление из заявки (без PK м-м)
 @api_view(["DELETE"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def DeleteCityFromVacancyApplication(request, mm_id):
     try:
         city_vacancy_application = CitiesVacancyApplications.objects.get(mm_id=mm_id)
@@ -336,6 +390,11 @@ def DeleteCityFromVacancyApplication(request, mm_id):
 
     # Сохраняем ID заявки перед удалением связи
     app_id = city_vacancy_application.app_id_id
+    vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+
+    if not request.user.is_staff:
+        if vacancy_application.creator != request.user or vacancy_application.status != 1:
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
     # Удаляем связь
     city_vacancy_application.delete()
@@ -354,12 +413,22 @@ def DeleteCityFromVacancyApplication(request, mm_id):
 
 
 # PUT изменение количества/порядка/значения в м-м (без PK м-м)
+@swagger_auto_schema(method='put', request_body=CitiesVacancyApplicationsSerializer)
 @api_view(["PUT"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def UpdateVacancyApplication(request, mm_id):
     try:
         city_vacancy_application = CitiesVacancyApplications.objects.get(mm_id=mm_id)
     except CitiesVacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Связь между городом и заявкой не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+    app_id = city_vacancy_application.app_id_id
+    vacancy_application = VacancyApplications.objects.get(app_id=app_id)
+
+    if not request.user.is_staff:
+        if vacancy_application.creator != request.user or vacancy_application.status != 1:
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
     count = request.data.get("count")
 
@@ -373,30 +442,21 @@ def UpdateVacancyApplication(request, mm_id):
 
 
 # Домен пользователь
-# POST регистрация
-@api_view(["POST"])
-def register(request):
-    serializer = UserRegisterSerializer(data=request.data)
-
-    # Проверка валидности данных
-    if not serializer.is_valid():
-        return Response({"Ошибка": "Некорректные данные"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Сохранение нового пользователя
-    user = serializer.save()
-
-    # Сериализация и возврат данных нового пользователя
-    serializer = UserSerializer(user)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
 # PUT пользователя (личный кабинет)
+@swagger_auto_schema(method='put', request_body=UserSerializer)
 @api_view(["PUT"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def UpdateUser(request, user_id):
     if not User.objects.filter(id=user_id).exists():
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
 
     user = User.objects.get(id=user_id)
+
+    if not request.user.is_superuser:
+        if user != request.user:
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+
     serializer = UserSerializer(user, data=request.data, many=False, partial=True)
 
     if not serializer.is_valid():
@@ -407,25 +467,71 @@ def UpdateUser(request, user_id):
     return Response(serializer.data)
 
 
-# POST аутентификация
-@api_view(["POST"])
-def login(request):
-    serializer = UserLoginSerializer(data=request.data)
+class UserViewSet(viewsets.ModelViewSet):
+    """Класс, описывающий методы работы с пользователями
+    Осуществляет связь с таблицей пользователей в базе данных
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    model_class = User
 
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+    """def get_authenticators(self):
+        if self.action in ['create']:
+            authentication_classes = [AllowAny] # Отключаем аутентификацию
+        else:
+            authentication_classes = [CsrfExemptSessionAuthentication()]  # Используем
+        return [authenticate() for authenticate in authentication_classes]"""
 
-    user = authenticate(**serializer.data)
-    if user is None:
-        return Response(status=status.HTTP_401_UNAUTHORIZED)
+    def get_permissions(self):
+        if self.action in ['create']:
+            permission_classes = [AllowAny]
+        elif self.action in ['list']:
+            permission_classes = [IsAdmin | IsManager ]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
 
-    return Response(status=status.HTTP_200_OK)
+    def create(self, request):
+        """
+        Функция регистрации новых пользователей
+        Если пользователя c указанным в request email ещё нет, в БД будет добавлен новый пользователь.
+        """
+        if self.model_class.objects.filter(username=request.data['username']).exists():
+            return Response({'status': 'Exist'}, status=400)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            print(serializer.data)
+            self.model_class.objects.create_user(username=serializer.data['username'],
+                                     password=serializer.data['password'],
+                                     is_superuser=serializer.data['is_superuser'],
+                                     is_staff=serializer.data['is_staff'])
+            return Response({'status': 'Success'}, status=200)
+        return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# POST деавторизация
-@api_view(["POST"])
+@csrf_exempt
+@permission_classes([AllowAny])
+@authentication_classes([])
+def login_view(request):
+    data = request.POST
+    username = data.get("username")
+    password = data.get("password")
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        login(request, user)
+        return HttpResponse("{'status': 'ok'}")
+    else:
+        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([CsrfExemptSessionAuthentication])
 def logout_view(request):
-    # request.user.auth_token.delete()
     logout(request)
+    return Response({'status': 'Success'})
 
-    return Response(status=status.HTTP_200_OK)
+
+# Connect to our Redis instance
+session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
