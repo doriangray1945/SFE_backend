@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AbstractBaseUser, PermissionsMixin, UserManager
 
 class Cities(models.Model):
     STATUS_CHOICES = [
@@ -61,3 +61,42 @@ class CitiesVacancyApplications(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['city_id', 'app_id'], name='unique constraint')
         ]
+
+
+class NewUserManager(UserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('User must have an email address')
+
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self.db)
+        return user
+
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(("email адрес"), unique=True)
+    password = models.CharField(max_length=50, verbose_name="Пароль")
+    is_staff = models.BooleanField(default=False, verbose_name="Является ли пользователь менеджером?")
+    is_superuser = models.BooleanField(default=False, verbose_name="Является ли пользователь админом?")
+
+    # Уникальные обратные ссылки для полей groups и user_permissions
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='customuser_set',  # Уникальное имя для обратной связи
+        blank=True,
+        help_text=("Группы, к которым принадлежит пользователь."),
+        verbose_name=("группы")
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='customuser_set',  # Уникальное имя для обратной связи
+        blank=True,
+        help_text=("Конкретные разрешения для пользователя."),
+        verbose_name=("права пользователя")
+    )
+
+    USERNAME_FIELD = 'email'
+
+    objects = NewUserManager()

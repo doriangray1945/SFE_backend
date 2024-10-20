@@ -2,6 +2,7 @@ from .models import *
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from app import views
+from collections import OrderedDict
 
 
 class CitiesSerializer(serializers.ModelSerializer):
@@ -13,6 +14,13 @@ class CitiesSerializer(serializers.ModelSerializer):
         model = Cities
         #fields = '__all__'
         fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url", "status"]
+
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields
 
     """def get_count(self, obj):
         # Получаем черновое приложение вакансии
@@ -50,9 +58,12 @@ class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
     class Meta:
-        model = User
-        fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username")
+        model = CustomUser
+        #fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username") # Для PUT пользователя
+        fields = ["email", "password", "is_staff", "is_superuser"]
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):

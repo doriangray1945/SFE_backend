@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.contrib.auth import authenticate, logout
 
+from drf_yasg.utils import swagger_auto_schema
+
 
 def GetCurrentUser():
     return User.objects.filter(is_superuser=False).first()
@@ -59,6 +61,7 @@ def GetCityById(request, city_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(method='post', request_body=CitiesSerializer)
 # POST добавление
 @api_view(["POST"])
 def CreateCity(request):
@@ -276,6 +279,7 @@ def UpdateStatusUser(request, app_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(method='put', request_body=VacancyApplicationsSerializer)
 # PUT завершить/отклонить модератором. При завершить/отклонении заявки проставляется модератор и дата завершения. Одно из доп. полей заявки или м-м рассчитывается при завершении заявки (вычисление стоимости заказа, даты доставки в течении месяца, вычисления в м-м).
 @api_view(["PUT"])
 def UpdateStatusAdmin(request, app_id):
