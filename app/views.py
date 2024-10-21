@@ -1,12 +1,10 @@
-from urllib import request
-
 from rest_framework.response import Response
 from rest_framework import status
 from app.serializers import *
 from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from .minio import add_pic
 from app.models import *
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -14,14 +12,15 @@ from drf_yasg.utils import swagger_auto_schema
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
 
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework import viewsets
 import redis
 from django.conf import settings
 import uuid
 from django.views.decorators.csrf import csrf_exempt
-from app.permissions import IsAdmin, IsManager
+from app.permissions import *
 from rest_framework.authentication import SessionAuthentication
+
 
 
 # класс аутентификации, который исключает CSRF для сессий
@@ -124,7 +123,7 @@ def EditCity(request, city_id):
 @permission_classes([IsAdmin])
 def DeleteCity(request, city_id):
     try:
-        city = Cities.objects.get(city_id=city_id)
+        city = Cities.objects.get(city_id=city_id, status=1)
     except Cities.DoesNotExist:
         return Response({"Ошибка": "Город не найден"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -519,13 +518,18 @@ class UserViewSet(viewsets.ModelViewSet):
 @permission_classes([AllowAny])
 @authentication_classes([])
 def login_view(request):
-    data = request.data
-    username = data.get("username")
-    password = data.get("password")
+    username = request.data.get('username')
+    password = request.data.get('password')
     user = authenticate(request, username=username, password=password)
     if user is not None:
-        login(request, user)
-        return HttpResponse("{'status': 'ok'}")
+        random_key = str(uuid.uuid4())
+        session_storage.set(random_key, username)
+        response = HttpResponse("{'status': 'ok'}")
+        response.set_cookie('session_id', random_key)
+
+        return response
+        #login(request, user)
+        #return HttpResponse("{'status': 'ok'}")
     else:
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
@@ -535,8 +539,22 @@ def login_view(request):
 @permission_classes([IsAuthenticated])
 @authentication_classes([CsrfExemptSessionAuthentication])
 def logout_view(request):
-    logout(request)
-    return Response({'status': 'Success'})
+
+    session_id = request.COOKIES.get('session_id')
+
+    if session_id:
+        session_storage.delete(session_id)
+
+        response = Response({'status': 'Success'}, status=200)
+        response.delete_cookie('session_id')
+
+        logout(request)
+
+        request.user = AnonymousUser()
+
+        return response
+    else:
+        return Response({'status': 'Error', 'message': 'No active session'}, status=400)
 
 
 # Connect to our Redis instance

@@ -68,6 +68,14 @@ services:
     depends_on:
       - minio
 
+  redis:
+    depends_on:
+      - pgdb
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - 6379:6379
 
 volumes:
   pgdata:
