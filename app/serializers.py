@@ -15,12 +15,12 @@ class CitiesSerializer(serializers.ModelSerializer):
         #fields = '__all__'
         fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url", "status"]
 
-    def get_fields(self):
+    """def get_fields(self):
         new_fields = OrderedDict()
         for name, field in super().get_fields().items():
             field.required = False
             new_fields[name] = field
-        return new_fields
+        return new_fields"""
 
     """def get_count(self, obj):
         # Получаем черновое приложение вакансии
@@ -33,18 +33,19 @@ class CitiesSerializer(serializers.ModelSerializer):
 
 
 class VacancyApplicationsSerializer(serializers.ModelSerializer):
-    #creator = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
+    creator = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
+    moderator = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
 
     class Meta:
         model = VacancyApplications
         fields = "__all__"
 
-    def get_fields(self):
+    """def get_fields(self):
         new_fields = OrderedDict()
         for name, field in super().get_fields().items():
             field.required = False
             new_fields[name] = field
-        return new_fields
+        return new_fields"""
 
 
 class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
@@ -55,12 +56,12 @@ class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
         model = CitiesVacancyApplications
         fields = ["mm_id", "app_id", "city_id", "count"]
 
-    def get_fields(self):
+    """def get_fields(self):
         new_fields = OrderedDict()
         for name, field in super().get_fields().items():
             field.required = False
             new_fields[name] = field
-        return new_fields
+        return new_fields"""
 
 
 """class UserSerializer(serializers.ModelSerializer):
@@ -81,9 +82,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "email", "password", "first_name", "last_name", "date_joined", "password", "username", "is_staff", "is_superuser") # Для PUT пользователя
 
-    def get_fields(self):
+    """def get_fields(self):
         new_fields = OrderedDict()
         for name, field in super().get_fields().items():
             field.required = False
             new_fields[name] = field
-        return new_fields
+        return new_fields"""

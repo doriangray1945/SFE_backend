@@ -114,7 +114,7 @@ def EditCity(request, city_id):
         if 'error' in pic_result.data:
             return pic_result  # Возвращаем ошибку, если загрузка изображения не удалась
 
-    # Возвращаем обновлённые данные детали
+    # Возвращаем обновлённые данные
     return Response(CitiesSerializer(edited_city).data, status=status.HTTP_200_OK)
 
 
@@ -216,7 +216,7 @@ def VacancyApplicationsList(request):
     date_submitted_start = request.GET.get("date_submitted_start")
     date_submitted_end = request.GET.get("date_submitted_end")
 
-    if request.user.is_staff:
+    if request.user.is_staff or request.user.is_superuser:
         vacancy_applications = VacancyApplications.objects.all()
     else:
         vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
@@ -242,7 +242,7 @@ def VacancyApplicationsList(request):
 @permission_classes([IsAuthenticated])
 def GetVacancyApplicationById(request, app_id):
     try:
-        if request.user.is_staff:
+        if request.user.is_staff or request.user.is_superuser:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id)
         else:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user)
@@ -269,7 +269,7 @@ def GetVacancyApplicationById(request, app_id):
 @permission_classes([IsAuthenticated])
 def UpdateVacancy(request, app_id):
     try:
-        if request.user.is_staff:
+        if request.user.is_staff or request.user.is_superuser:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id)
         else:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user, status=1)
@@ -299,7 +299,7 @@ def UpdateVacancy(request, app_id):
 @permission_classes([IsAuthenticated])
 def UpdateStatusUser(request, app_id):
     try:
-        if request.user.is_staff:
+        if request.user.is_staff or request.user.is_superuser:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id)
         else:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user, status=1)
@@ -331,7 +331,7 @@ def UpdateStatusUser(request, app_id):
 @swagger_auto_schema(method='put', request_body=VacancyApplicationsSerializer)
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsManager])
+@permission_classes([IsManager | IsAdmin])
 def UpdateStatusAdmin(request, app_id):
     try:
         vacancy_application = VacancyApplications.objects.get(app_id=app_id)
@@ -344,6 +344,8 @@ def UpdateStatusAdmin(request, app_id):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     if vacancy_application.status != 3:
+        if request_status in [4, 5]:
+            return Response({"Ошибка": "Заявка уже завершена/отклонена."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return Response({"Ошибка": "Заявка ещё не сформирована"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     vacancy_application.completed = timezone.now()
@@ -359,7 +361,7 @@ def UpdateStatusAdmin(request, app_id):
 # DELETE удаление (дата формирования)
 @api_view(["DELETE"])
 @authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsManager])
+@permission_classes([IsManager | IsAdmin])
 def DeleteVacancyApplication(request, app_id):
     try:
         vacancy_application = VacancyApplications.objects.get(app_id=app_id)
@@ -392,7 +394,7 @@ def DeleteCityFromVacancyApplication(request, mm_id):
     app_id = city_vacancy_application.app_id_id
     vacancy_application = VacancyApplications.objects.get(app_id=app_id)
 
-    if not request.user.is_staff:
+    if not request.user.is_staff or request.user.is_superuser:
         if vacancy_application.creator != request.user or vacancy_application.status != 1:
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -405,10 +407,10 @@ def DeleteCityFromVacancyApplication(request, mm_id):
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена после удаления города"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Сериализуем обновлённую отправку
+    # Сериализуем обновлённую заявку
     serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
 
-    # Возвращаем обновлённые данные отправки
+    # Возвращаем обновлённые данные заявки
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -426,7 +428,7 @@ def UpdateVacancyApplication(request, mm_id):
     app_id = city_vacancy_application.app_id_id
     vacancy_application = VacancyApplications.objects.get(app_id=app_id)
 
-    if not request.user.is_staff:
+    if not request.user.is_staff or request.user.is_superuser:
         if vacancy_application.creator != request.user or vacancy_application.status != 1:
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -482,6 +484,8 @@ class UserViewSet(viewsets.ModelViewSet):
             authentication_classes = [CsrfExemptSessionAuthentication()]  # Используем
         return [authenticate() for authenticate in authentication_classes]"""
 
+    http_method_names = ['create', 'list', 'get', 'post', 'delete']
+
     def get_permissions(self):
         if self.action in ['create']:
             permission_classes = [AllowAny]
@@ -509,11 +513,13 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@csrf_exempt
+#@csrf_exempt
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@api_view(["POST"])
 @permission_classes([AllowAny])
 @authentication_classes([])
 def login_view(request):
-    data = request.POST
+    data = request.data
     username = data.get("username")
     password = data.get("password")
     user = authenticate(request, username=username, password=password)
@@ -524,7 +530,7 @@ def login_view(request):
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
 
-@csrf_exempt
+#@csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([CsrfExemptSessionAuthentication])
