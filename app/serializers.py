@@ -25,7 +25,7 @@ class CitiesSerializer(serializers.ModelSerializer):
 
 
 class VacancyApplicationsSerializer(serializers.ModelSerializer):
-    #creator = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
+    creator = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
 
     class Meta:
         model = VacancyApplications

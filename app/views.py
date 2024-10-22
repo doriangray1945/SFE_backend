@@ -66,9 +66,9 @@ def CreateCity(request):
     city_data.pop('image', None)
 
     serializer = CitiesSerializer(data=city_data)
-    serializer.is_valid(raise_exception=True)  # Проверка валидности с автоматической обработкой ошибок
-    new_city = serializer.save()  # Сохраняем новую деталь
-    # Обновляем и возвращаем данные с новой деталью
+    serializer.is_valid(raise_exception=True)
+    new_city = serializer.save()
+
     return Response(CitiesSerializer(new_city).data, status=status.HTTP_201_CREATED)
 
 
@@ -94,7 +94,6 @@ def EditCity(request, city_id):
         if 'error' in pic_result.data:
             return pic_result  # Возвращаем ошибку, если загрузка изображения не удалась
 
-    # Возвращаем обновлённые данные детали
     return Response(CitiesSerializer(edited_city).data, status=status.HTTP_200_OK)
 
 
@@ -312,6 +311,8 @@ def DeleteVacancyApplication(request, app_id):
 
     if vacancy_application.status == 1:
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    elif vacancy_application.status == 2:
+        return Response({"Ошибка": "Заявка уже удалена."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     vacancy_application.status = 2
     vacancy_application.save()
@@ -342,10 +343,8 @@ def DeleteCityFromVacancyApplication(request, mm_id):
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена после удаления города"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Сериализуем обновлённую отправку
     serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
 
-    # Возвращаем обновлённые данные отправки
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
