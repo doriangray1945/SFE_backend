@@ -43,8 +43,8 @@ class IsManager(permissions.BasePermission):
             request.user = user
             if user.is_staff and not user.is_superuser:
                 return True
-            else:
-                raise PermissionDenied("You do not have permission to perform this action.")
+            #else:
+                #raise PermissionDenied("You do not have permission to perform this action.")
         request.user = AnonymousUser()
         return False
 
