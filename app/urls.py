@@ -42,8 +42,8 @@ urlpatterns = [
     path('vacancy_applications/<int:app_id>/update_status_admin/', views.UpdateStatusAdmin, name='update_status_admin'),
     path('vacancy_applications/<int:app_id>/delete_vacancy_application/', views.DeleteVacancyApplication, name='delete_vacancy_application'),
 
-    path('cities_vacancy_applications/<int:mm_id>/delete_city_from_vacancy_application/', views.DeleteCityFromVacancyApplication, name='delete_city_from_vacancy_application'),
-    path('cities_vacancy_applications/<int:mm_id>/update_vacancy_application/', views.UpdateVacancyApplication, name='update_vacancy_application'),
+    path('cities_vacancy_applications/<int:app_id>/<int:city_id>/delete_city_from_vacancy_application/', views.DeleteCityFromVacancyApplication, name='delete_city_from_vacancy_application'),
+    path('cities_vacancy_applications/<int:app_id>/<int:city_id>/update_vacancy_application/', views.UpdateVacancyApplication, name='update_vacancy_application'),
 
     path('user/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
     path('login/', views.login_view, name='login'),

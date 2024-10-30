@@ -174,9 +174,17 @@ def AddCityToDraft(request, city_id):
         except Exception as e:
             return Response({"error": f"Ошибка при создании связки: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    serializer = VacancyApplicationsSerializer(draft_vacancy_application)
+    vacancy_application_serializer = VacancyApplicationsSerializer(draft_vacancy_application, many=False)
 
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    cities_vacancy_applications = CitiesVacancyApplications.objects.filter(app_id=draft_vacancy_application)
+    cities_serializer = CitiesVacancyApplicationsSerializer(cities_vacancy_applications, many=True, fields=["city_id", "count"])
+
+    response_data = {
+        'vacancy_application': vacancy_application_serializer.data,
+        'cities': cities_serializer.data
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 # POST добавление изображения. Добавление изображения по id услуги, старое изображение заменяется/удаляется. minio только в этом методе и удалении!
@@ -244,14 +252,14 @@ def GetVacancyApplicationById(request, app_id):
         if request.user.is_staff or request.user.is_superuser:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id)
         else:
-            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user)
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user, status=1)
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
     vacancy_application_serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
 
     cities_vacancy_applications = CitiesVacancyApplications.objects.filter(app_id=app_id)
-    cities_serializer = CitiesVacancyApplicationsSerializer(cities_vacancy_applications, many=True)
+    cities_serializer = CitiesVacancyApplicationsSerializer(cities_vacancy_applications, many=True, fields=["city_id", "count"])
 
     response_data = {
         'vacancy_application': vacancy_application_serializer.data,
@@ -383,31 +391,30 @@ def DeleteVacancyApplication(request, app_id):
 @api_view(["DELETE"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def DeleteCityFromVacancyApplication(request, mm_id):
+def DeleteCityFromVacancyApplication(request, app_id, city_id):
     try:
-        city_vacancy_application = CitiesVacancyApplications.objects.get(mm_id=mm_id)
+        city_vacancy_application = CitiesVacancyApplications.objects.get(app_id=app_id, city_id=city_id)
     except CitiesVacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Связь между городом и заявкой не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
     # Сохраняем ID заявки перед удалением связи
-    app_id = city_vacancy_application.app_id_id
     vacancy_application = VacancyApplications.objects.get(app_id=app_id)
 
-    if not request.user.is_staff or request.user.is_superuser:
+    if request.user.is_staff == False or request.user.is_superuser == False:
         if vacancy_application.creator != request.user or vacancy_application.status != 1:
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
     # Удаляем связь
     city_vacancy_application.delete()
 
-    # Обновляем данные заявки
-    try:
-        vacancy_application = VacancyApplications.objects.get(app_id=app_id)
-    except VacancyApplications.DoesNotExist:
-        return Response({"Ошибка": "Заявка на создание вакансии не найдена после удаления города"}, status=status.HTTP_404_NOT_FOUND)
+    # Проверяем, остались ли еще города в этой заявке
+    city_vacancy_application = CitiesVacancyApplications.objects.filter(app_id=app_id)
+    if not city_vacancy_application.exists():  # Если больше нет городов
+        vacancy_application.delete()  # Удаляем и саму заявку
+        return Response({"detail": "Пустая заявка удалена"}, status=status.HTTP_200_OK)
 
     # Сериализуем обновлённую заявку
-    serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
+    serializer = CitiesVacancyApplicationsSerializer(city_vacancy_application, many=False)
 
     # Возвращаем обновлённые данные заявки
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -418,16 +425,15 @@ def DeleteCityFromVacancyApplication(request, mm_id):
 @api_view(["PUT"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def UpdateVacancyApplication(request, mm_id):
+def UpdateVacancyApplication(request, app_id, city_id):
     try:
-        city_vacancy_application = CitiesVacancyApplications.objects.get(mm_id=mm_id)
+        city_vacancy_application = CitiesVacancyApplications.objects.get(app_id=app_id, city_id=city_id)
     except CitiesVacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Связь между городом и заявкой не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    app_id = city_vacancy_application.app_id_id
     vacancy_application = VacancyApplications.objects.get(app_id=app_id)
 
-    if not request.user.is_staff or request.user.is_superuser:
+    if request.user.is_staff == False or request.user.is_superuser == False:
         if vacancy_application.creator != request.user or vacancy_application.status != 1:
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 

@@ -13,7 +13,7 @@ class CitiesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cities
         #fields = '__all__'
-        fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url", "status"]
+        fields = ["city_id", "name", "population", "salary", "unemployment_rate", "description", "url"]
 
     """def get_fields(self):
         new_fields = OrderedDict()
@@ -49,12 +49,22 @@ class VacancyApplicationsSerializer(serializers.ModelSerializer):
 
 
 class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
-    city_id = CitiesSerializer()  # Включаем сериализатор для города
+    city_id = CitiesSerializer()  # Используем 'city' вместо 'city_id'
     count = serializers.IntegerField()  # Количество услуг для города
 
     class Meta:
         model = CitiesVacancyApplications
-        fields = ["mm_id", "app_id", "city_id", "count"]
+        fields = ["app_id", "city_id", "count"]
+
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop('fields', None)  # Получаем список полей из аргументов
+        super().__init__(*args, **kwargs)
+        if fields is not None:
+            # Оставляем только указанные поля
+            allowed = set(fields)
+            existing = set(self.fields.keys())
+            for field_name in existing - allowed:
+                self.fields.pop(field_name)
 
     """def get_fields(self):
         new_fields = OrderedDict()
@@ -62,14 +72,6 @@ class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
             field.required = False
             new_fields[name] = field
         return new_fields"""
-
-
-"""class UserSerializer(serializers.ModelSerializer):
-    cities_set = CitiesSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = AuthUser
-        fields = ["id", "first_name", "last_name", "cities_set"]"""
 
 
 class UserSerializer(serializers.ModelSerializer):
