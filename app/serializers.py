@@ -1,8 +1,6 @@
 from .models import *
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from app import views
-from collections import OrderedDict
 
 
 class CitiesSerializer(serializers.ModelSerializer):
@@ -49,8 +47,8 @@ class VacancyApplicationsSerializer(serializers.ModelSerializer):
 
 
 class CitiesVacancyApplicationsSerializer(serializers.ModelSerializer):
-    city_id = CitiesSerializer()  # Используем 'city' вместо 'city_id'
-    count = serializers.IntegerField()  # Количество услуг для города
+    city_id = CitiesSerializer()
+    count = serializers.IntegerField()
 
     class Meta:
         model = CitiesVacancyApplications
