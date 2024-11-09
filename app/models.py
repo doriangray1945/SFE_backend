@@ -33,13 +33,15 @@ class VacancyApplications(models.Model):
     date_created = models.DateTimeField(blank=False, null=False)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_applications', blank=False, null=False)
 
-    submitted = models.DateTimeField(blank=True, null=True)
-    completed = models.DateTimeField(blank=True, null=True)
+    date_submitted = models.DateTimeField(blank=True, null=True)
+    date_completed = models.DateTimeField(blank=True, null=True)
     moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_applications',blank=True, null=True)
 
     vacancy_name = models.TextField(blank=True, null=True)
     vacancy_responsibilities = models.TextField(blank=True, null=True)
     vacancy_requirements = models.TextField(blank=True, null=True)
+
+    duration_days = models.IntegerField(blank=True, null=True, editable=False)
 
     class Meta:
         managed = True

@@ -233,10 +233,10 @@ def VacancyApplicationsList(request):
         vacancy_applications = vacancy_applications.filter(status=status)
 
     if date_submitted_start and parse_datetime(date_submitted_start):
-        vacancy_applications = vacancy_applications.filter(submitted__gte=parse_datetime(date_submitted_start))
+        vacancy_applications = vacancy_applications.filter(date_submitted__gte=parse_datetime(date_submitted_start))
 
     if date_submitted_end and parse_datetime(date_submitted_end):
-        vacancy_applications = vacancy_applications.filter(submitted__lt=parse_datetime(date_submitted_end))
+        vacancy_applications = vacancy_applications.filter(date_submitted__lt=parse_datetime(date_submitted_end))
 
     serializer = VacancyApplicationsSerializer(vacancy_applications, many=True)
 
@@ -327,7 +327,7 @@ def UpdateStatusUser(request, app_id):
         )
 
     vacancy_application.status = 3
-    vacancy_application.submitted = timezone.now()
+    vacancy_application.date_submitted = timezone.now()
     vacancy_application.save()
 
     serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
@@ -351,13 +351,13 @@ def UpdateStatusAdmin(request, app_id):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     if vacancy_application.status != 3:
-        if request_status in [4, 5]:
-            return Response({"Ошибка": "Заявка уже завершена/отклонена."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return Response({"Ошибка": "Заявка ещё не сформирована"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    vacancy_application.completed = timezone.now()
+    vacancy_application.date_completed = timezone.now()
     vacancy_application.status = request_status
     vacancy_application.moderator = request.user
+    vacancy_application.duration_days = (vacancy_application.date_completed - vacancy_application.date_created).days
+
     vacancy_application.save()
 
     serializer = VacancyApplicationsSerializer(vacancy_application, many=False)
