@@ -14,13 +14,12 @@ from django.http import HttpResponse
 
 from rest_framework.permissions import AllowAny
 from rest_framework import viewsets
-import redis
 from django.conf import settings
 import uuid
-from django.views.decorators.csrf import csrf_exempt
 from app.permissions import *
 from rest_framework.authentication import SessionAuthentication
 
+import random
 
 
 # класс аутентификации, который исключает CSRF для сессий
@@ -356,7 +355,7 @@ def UpdateStatusAdmin(request, app_id):
     vacancy_application.date_completed = timezone.now()
     vacancy_application.status = request_status
     vacancy_application.moderator = request.user
-    vacancy_application.duration_days = (vacancy_application.date_completed - vacancy_application.date_created).days
+    vacancy_application.duration_days = random.randint(1, 30)
 
     vacancy_application.save()
 
