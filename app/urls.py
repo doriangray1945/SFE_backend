@@ -46,8 +46,8 @@ urlpatterns = [
     path('cities_vacancy_applications/<int:app_id>/<int:city_id>/update_vacancy_application/', views.UpdateVacancyApplication, name='update_vacancy_application'),
 
     path('user/<int:user_id>/update_user/', views.UpdateUser, name='update_user'),
-    path('/login', views.login_view, name='login'),
-    path('/logout', views.logout_view, name='logout'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
 
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
