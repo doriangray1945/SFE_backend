@@ -52,7 +52,7 @@ def CitiesList(request):
     response = {
         "cities": serializer.data,
         "draft_vacancy_application": app_id,
-        "count": count,
+        "count": count
     }
     return Response(response, status=status.HTTP_200_OK)
 
