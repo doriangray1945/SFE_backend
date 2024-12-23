@@ -798,23 +798,27 @@ def UpdateVacancyApplication(request, app_id, city_id):
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def UpdateUser(request, user_id):
+    # Проверяем, существует ли пользователь
     if not User.objects.filter(id=user_id).exists():
         return Response({"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
 
     user = User.objects.get(id=user_id)
 
-    if not request.user.is_superuser:
-        if user != request.user:
-            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+    # Проверяем права доступа
+    if not request.user.is_superuser and user != request.user:
+        return Response({"detail": "You don not have permission to do this action."}, status=status.HTTP_403_FORBIDDEN)
 
-    serializer = UserSerializer(user, data=request.data, many=False, partial=True)
+    # Создаем сериализатор с partial=True для частичного обновления
+    serializer = UserSerializer(user, data=request.data, partial=True)
 
+    # Проверяем валидность данных
     if not serializer.is_valid():
-        return Response(status=status.HTTP_409_CONFLICT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # Сохраняем обновленные данные
     serializer.save()
 
-    return Response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
