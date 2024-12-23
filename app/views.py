@@ -716,11 +716,12 @@ def DeleteCityFromVacancyApplication(request, app_id, city_id):
     # Удаляем связь
     city_vacancy_application.delete()
 
-    # Проверяем, остались ли еще города в этой заявке
+    """"# Проверяем, остались ли еще города в этой заявке
     city_vacancy_application = CitiesVacancyApplications.objects.filter(app_id=app_id)
     if not city_vacancy_application.exists():  # Если больше нет городов
-        vacancy_application.delete()  # Удаляем и саму заявку
-        return Response({"detail": "Пустая заявка удалена"}, status=status.HTTP_200_OK)
+        vacancy_application.status = 2
+        vacancy_application.save()
+        return Response({"detail": "Пустая заявка удалена"}, status=status.HTTP_200_OK)"""
 
     # Сериализуем обновлённую заявку
     serializer = CitiesVacancyApplicationsSerializer(city_vacancy_application, many=False)
@@ -808,8 +809,14 @@ def UpdateUser(request, user_id):
     if not request.user.is_superuser and user != request.user:
         return Response({"detail": "You don not have permission to do this action."}, status=status.HTTP_403_FORBIDDEN)
 
+    data = request.data
+    if 'password' in data:
+        # Хэшируем пароль перед сохранением
+        user.set_password(data['password'])
+        data.pop('password', None)
+
     # Создаем сериализатор с partial=True для частичного обновления
-    serializer = UserSerializer(user, data=request.data, partial=True)
+    serializer = UserSerializer(user, data=data, partial=True)
 
     # Проверяем валидность данных
     if not serializer.is_valid():
@@ -828,13 +835,6 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     model_class = User
-
-    """def get_authenticators(self):
-        if self.action in ['create']:
-            authentication_classes = [AllowAny] # Отключаем аутентификацию
-        else:
-            authentication_classes = [CsrfExemptSessionAuthentication()]  # Используем
-        return [authenticate() for authenticate in authentication_classes]"""
 
     http_method_names = ['create', 'list', 'get', 'post', 'delete']
 
@@ -862,6 +862,7 @@ class UserViewSet(viewsets.ModelViewSet):
             400: openapi.Response('Ошибка регистрации, например, если пользователь с таким username уже существует'),
         }
     )
+    @authentication_classes([CsrfExemptSessionAuthentication])
     def create(self, request):
         """
         Функция регистрации новых пользователей
