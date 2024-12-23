@@ -333,16 +333,18 @@ def UpdateCityImage(request, city_id):
                     ),
                     "status": openapi.Schema(
                         type=openapi.TYPE_INTEGER,
-                        description="Статус заявки: 1 - 'Черновик', 2 - 'Удалена', 3 - 'Сформирована', 4 - 'Завершена', 5 - 'Отклонена'."
+                        description="Статус заявки: 1 - 'Черновик', 2 - 'Удалена', 3 - 'Сформирована', 4 - 'Завершена', 5 - 'Отклонена'.",
                     ),
                     "date_created": openapi.Schema(
                         type=openapi.TYPE_STRING,
                         format="date-time",
-                        description="Дата и время создания заявки."
+                        description="Дата и время создания заявки.",
+                        nullable=False,
                     ),
                     "creator": openapi.Schema(
                         type=openapi.TYPE_STRING,
-                        description="Имя пользователя, который создал заявку."
+                        description="Имя пользователя, который создал заявку.",
+                        nullable=False,
                     ),
                     "moderator": openapi.Schema(
                         type=openapi.TYPE_STRING,
@@ -395,7 +397,7 @@ def VacancyApplicationsList(request):
     date_submitted_end = request.GET.get("date_submitted_end")
 
     if request.user.is_staff or request.user.is_superuser:
-        vacancy_applications = VacancyApplications.objects.all()
+        vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
     else:
         vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
         vacancy_applications = vacancy_applications.filter(creator=request.user)
@@ -477,7 +479,7 @@ def GetVacancyApplicationById(request, app_id):
         if request.user.is_staff or request.user.is_superuser:
             vacancy_application = VacancyApplications.objects.get(app_id=app_id)
         else:
-            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user, status=1)
+            vacancy_application = VacancyApplications.objects.get(app_id=app_id, creator=request.user)
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -497,6 +499,14 @@ def GetVacancyApplicationById(request, app_id):
 # PUT изменения полей заявки по теме
 @swagger_auto_schema(
     method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'vacancy_name': openapi.Schema(type=openapi.TYPE_STRING, example="Senior Developer"),
+            'vacancy_responsibilities': openapi.Schema(type=openapi.TYPE_STRING, example="Develop new features and maintain existing ones"),
+            'vacancy_requirements': openapi.Schema(type=openapi.TYPE_STRING, example="3+ years experience in React and Node.js"),
+        }
+    ),
     responses={
         status.HTTP_200_OK: VacancyApplicationsSerializer,
         status.HTTP_400_BAD_REQUEST: openapi.Schema(
@@ -549,7 +559,7 @@ def UpdateVacancy(request, app_id):
         status.HTTP_400_BAD_REQUEST: openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Не заполнены обязательные поля: vacancy_name, vacancy_responsibilities."),
+                "Ошибка": openapi.Schema(type=openapi.TYPE_STRING, example="Не заполнены данные о вакансии."),
             },
         ),
         status.HTTP_404_NOT_FOUND: openapi.Schema(
@@ -833,6 +843,21 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAdmin]
         return [permission() for permission in permission_classes]
 
+    @swagger_auto_schema(
+        operation_description="Регистрация нового пользователя (только username и password)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING, description='Имя пользователя'),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, description='Пароль пользователя', minLength=8),
+            },
+            required=['username', 'password']
+        ),
+        responses={
+            200: openapi.Response('Успешная регистрация'),
+            400: openapi.Response('Ошибка регистрации, например, если пользователь с таким username уже существует'),
+        }
+    )
     def create(self, request):
         """
         Функция регистрации новых пользователей

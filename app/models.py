@@ -35,7 +35,7 @@ class VacancyApplications(models.Model):
 
     date_submitted = models.DateTimeField(blank=True, null=True)
     date_completed = models.DateTimeField(blank=True, null=True)
-    moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_applications',blank=True, null=True)
+    moderator = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='moderated_applications', blank=True, null=True)
 
     vacancy_name = models.TextField(blank=True, null=True)
     vacancy_responsibilities = models.TextField(blank=True, null=True)
