@@ -41,7 +41,7 @@ class VacancyApplications(models.Model):
     vacancy_responsibilities = models.TextField(blank=True, null=True)
     vacancy_requirements = models.TextField(blank=True, null=True)
 
-    duration_days = models.IntegerField(blank=True, null=True, editable=False)
+    duration_days = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = True

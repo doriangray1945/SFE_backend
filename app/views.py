@@ -684,8 +684,8 @@ def DeleteVacancyApplication(request, app_id):
     except VacancyApplications.DoesNotExist:
         return Response({"Ошибка": "Заявка на создание вакансии не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-    if vacancy_application.status == 1:
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    """if vacancy_application.status == 1:
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)"""
 
     vacancy_application.status = 2
     vacancy_application.save()
