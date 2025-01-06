@@ -187,7 +187,51 @@ def DeleteCity(request, city_id):
 
 
 # POST добавления в заявку-черновик. Заявка создается пустой, указывается автоматически создатель, дата создания и статус, остальные поля указываются через PUT или смену статуса
-@swagger_auto_schema(method='post')
+@swagger_auto_schema(method='post', responses={
+        status.HTTP_200_OK: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "vacancy_application": openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "app_id": openapi.Schema(type=openapi.TYPE_INTEGER, description="Уникальный идентификатор заявки."),
+                        "status": openapi.Schema(type=openapi.TYPE_INTEGER, description="Статус заявки."),
+                        "date_created": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", description="Дата и время создания заявки."),
+                        "creator": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя, создавшего заявку."),
+                        "moderator": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Имя модератора заявки (если есть)."),
+                        "date_submitted": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата отправки заявки."),
+                        "date_completed": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", nullable=True, description="Дата завершения заявки."),
+                        "vacancy_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Название вакансии."),
+                        "vacancy_responsibilities": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Обязанности вакансии."),
+                        "vacancy_requirements": openapi.Schema(type=openapi.TYPE_STRING, nullable=True, description="Требования вакансии."),
+                        "duration_days": openapi.Schema(type=openapi.TYPE_INTEGER, nullable=True, description="Продолжительность обработки заявки в днях."),
+                    },
+                ),
+                "cities": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "city_id": openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    "city_id": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    "name": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "population": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "salary": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "unemployment_rate": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "description": openapi.Schema(type=openapi.TYPE_STRING, nullable=False),
+                                    "url": openapi.Schema(type=openapi.TYPE_STRING),
+                                },
+                            ),
+                            "count": openapi.Schema(type=openapi.TYPE_INTEGER, description="Количество записей для данного города."),
+                        },
+                    ),
+                    description="Список городов, привязанных к заявке."
+                ),
+            },
+        ),
+    })
 @api_view(["POST"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -677,7 +721,7 @@ def UpdateStatusAdmin(request, app_id):
 # DELETE удаление (дата формирования)
 @api_view(["DELETE"])
 @authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([IsManager | IsAdmin])
+@permission_classes([IsAuthenticated])
 def DeleteVacancyApplication(request, app_id):
     try:
         vacancy_application = VacancyApplications.objects.get(app_id=app_id)
