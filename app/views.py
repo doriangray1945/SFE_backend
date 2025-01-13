@@ -894,7 +894,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action in ['create']:
             permission_classes = [AllowAny]
         elif self.action in ['list']:
-            permission_classes = [IsManager | IsAdmin ]
+            permission_classes = [IsManager | IsAdmin]
         else:
             permission_classes = [IsAdmin]
         return [permission() for permission in permission_classes]
