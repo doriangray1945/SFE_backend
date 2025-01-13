@@ -37,6 +37,14 @@ def GetDraftVacancyApplication(request):
 # GET список с фильтрацией. В списке услуг возвращается id заявки-черновика этого пользователя для страницы заявки и количество услуг в этой заявке
 @swagger_auto_schema(
     method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'city_name',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_STRING,
+            required=False,
+        )
+    ],
     responses={
         status.HTTP_200_OK: openapi.Schema(
             type=openapi.TYPE_OBJECT,
