@@ -457,11 +457,13 @@ def VacancyApplicationsList(request):
     if status:
         vacancy_applications = vacancy_applications.filter(status=status)
 
-    if date_submitted_start and parse_datetime(date_submitted_start):
-        vacancy_applications = vacancy_applications.filter(date_submitted__gte=parse_datetime(date_submitted_start))
+    if date_submitted_start:
+        start_datetime = parse_datetime(date_submitted_start).replace(hour=0, minute=0, second=0, microsecond=0)
+        vacancy_applications = vacancy_applications.filter(date_submitted__gte=start_datetime)
 
-    if date_submitted_end and parse_datetime(date_submitted_end):
-        vacancy_applications = vacancy_applications.filter(date_submitted__lt=parse_datetime(date_submitted_end))
+    if date_submitted_end:
+        end_datetime = parse_datetime(date_submitted_end).replace(hour=23, minute=59, second=59, microsecond=0)
+        vacancy_applications = vacancy_applications.filter(date_submitted__lte=end_datetime)
 
     serializer = VacancyApplicationsSerializer(vacancy_applications, many=True)
 
