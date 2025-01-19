@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-jug1gtqrsut0pl-3)__4@*wybxdqibme=0p==sh6_h)njz)9ok
 # SECURITY WARNING: don't run with debug turned on in airlineion!
 DEBUG = True
 
-ALLOWED_HOSTS = ['172.20.10.2', 'localhost']
+ALLOWED_HOSTS = ['172.20.10.2', 'localhost', '192.168.8.87']
 
 
 # Application definition

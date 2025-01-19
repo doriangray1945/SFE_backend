@@ -21,6 +21,8 @@ from rest_framework.authentication import SessionAuthentication
 
 import random
 
+from rest_framework.pagination import PageNumberPagination
+
 
 # класс аутентификации, который исключает CSRF для сессий
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -346,6 +348,12 @@ def UpdateCityImage(request, city_id):
 
 #ДОМЕН ЗАЯВКИ
 #GET список (кроме удаленных и черновика, поля модератора и создателя через логины) с фильтрацией по диапазону даты формирования и статусу
+class VacancyApplicationsPagination(PageNumberPagination):
+    page_size = 50  # Стандартное количество записей на страницу
+    page_size_query_param = 'limit'
+    max_page_size = 1000
+
+
 @swagger_auto_schema(
     method="get",
     manual_parameters=[
@@ -372,6 +380,20 @@ def UpdateCityImage(request, city_id):
             format="date-time",
             required=False,
         ),
+        openapi.Parameter(
+            "page",
+            openapi.IN_QUERY,
+            description="Номер страницы для пагинации.",
+            type=openapi.TYPE_INTEGER,
+            required=False,
+        ),
+        openapi.Parameter(
+            "limit",
+            openapi.IN_QUERY,
+            description="Количество записей на странице.",
+            type=openapi.TYPE_INTEGER,
+            required=False,
+        ),
     ],
     responses={
         status.HTTP_200_OK: openapi.Schema(
@@ -380,8 +402,8 @@ def UpdateCityImage(request, city_id):
                 type=openapi.TYPE_OBJECT,
                 properties={
                     "app_id": openapi.Schema(
-                    type=openapi.TYPE_INTEGER,
-                    description="Уникальный идентификатор заявки."
+                        type=openapi.TYPE_INTEGER,
+                        description="Уникальный идентификатор заявки."
                     ),
                     "status": openapi.Schema(
                         type=openapi.TYPE_INTEGER,
@@ -444,18 +466,23 @@ def UpdateCityImage(request, city_id):
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def VacancyApplicationsList(request):
-    status = int(request.GET.get("status", 0))
+    status_filter = int(request.GET.get("status", 0))
     date_submitted_start = request.GET.get("date_submitted_start")
     date_submitted_end = request.GET.get("date_submitted_end")
 
+    # Получаем параметры пагинации
+    page = int(request.GET.get("page", 1))  # Страница по умолчанию - 1
+    limit = int(request.GET.get("limit", 50))  # Количество записей на странице по умолчанию - 50
+
+    # Фильтрация по статусу
     if request.user.is_staff or request.user.is_superuser:
         vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
     else:
         vacancy_applications = VacancyApplications.objects.exclude(status__in=[1, 2])
         vacancy_applications = vacancy_applications.filter(creator=request.user)
 
-    if status:
-        vacancy_applications = vacancy_applications.filter(status=status)
+    if status_filter:
+        vacancy_applications = vacancy_applications.filter(status=status_filter)
 
     if date_submitted_start:
         start_datetime = parse_datetime(date_submitted_start).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -465,9 +492,16 @@ def VacancyApplicationsList(request):
         end_datetime = parse_datetime(date_submitted_end).replace(hour=23, minute=59, second=59, microsecond=0)
         vacancy_applications = vacancy_applications.filter(date_submitted__lte=end_datetime)
 
-    serializer = VacancyApplicationsSerializer(vacancy_applications, many=True)
+    # Применяем пагинацию
+    paginator = VacancyApplicationsPagination()
+    paginator.page_size = limit  # Устанавливаем размер страницы
+    result_page = paginator.paginate_queryset(vacancy_applications, request)
 
-    return Response(serializer.data)
+    # Сериализация данных
+    serializer = VacancyApplicationsSerializer(result_page, many=True)
+
+    # Возвращаем результаты с пагинацией
+    return paginator.get_paginated_response(serializer.data)
 
 
 # GET одна запись (поля заявки + ее услуги). При получении заявки возвращется список ее услуг с картинками
