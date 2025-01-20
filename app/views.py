@@ -20,6 +20,7 @@ from app.permissions import *
 from rest_framework.authentication import SessionAuthentication
 
 import random
+import requests
 
 from rest_framework.pagination import PageNumberPagination
 
@@ -750,10 +751,18 @@ def UpdateStatusAdmin(request, app_id):
     if vacancy_application.status != 3:
         return Response({"Ошибка": "Заявка ещё не сформирована"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    try:
+        response = requests.post("http://host.docker.internal:8081/set_duration", data={"pk": app_id})
+        response.raise_for_status()  # Если статус ответа не 2xx, выбросит исключение
+        duration = response.json().get("duration")
+    except requests.exceptions.RequestException as e:
+        return Response({"Ошибка": f"Не удалось получить duration от второго сервера: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     vacancy_application.date_completed = timezone.now()
     vacancy_application.status = request_status
     vacancy_application.moderator = request.user
-    vacancy_application.duration_days = random.randint(1, 30)
+    vacancy_application.duration_days = duration
 
     vacancy_application.save()
 
